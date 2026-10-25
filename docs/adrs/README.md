@@ -27,9 +27,11 @@ their index.
 
 The folder is a living record, not a fill-in form, and its records are **yours
 from the first commit**: nothing upstream ever writes, moves or removes one. It
-arrives with no decisions in it and gains a row each time a record is written.
-Only this README is ever updated from the template - when you run
-🔄 Template Sync - merged with the rows your records add.
+arrives with one decision in it,
+[ADR-0001](ADR-0001-Record-Architecture-Decisions.md), the decision to keep
+these records, which doubles as a worked example, and gains a row each time a
+record is written. Only this README is ever updated from the template - when you
+run 🔄 Template Sync - merged with the rows your records add.
 
 ---
 
@@ -49,14 +51,16 @@ trade-offs that shaped it before changing it.
 
 <!-- AUTO-INDEX:BEGIN dir=. style=log fields=status,date,evidence -->
 
-| Entry                    | Status | Date | Evidence | Purpose    |
-| :----------------------- | :----- | :--- | :------- | :--------- |
-| [`README.md`](README.md) | -      | -    | -        | This file. |
+| Entry                                                                                    | Status   | Date       | Evidence | Purpose                                                                                                                           |
+| :--------------------------------------------------------------------------------------- | :------- | :--------- | :------- | :-------------------------------------------------------------------------------------------------------------------------------- |
+| [`ADR-0001-Record-Architecture-Decisions.md`](ADR-0001-Record-Architecture-Decisions.md) | Accepted | 2026-10-24 | N/A      | The decision to record every significant architecture decision as a numbered record in this folder, and the first example of one. |
+| [`README.md`](README.md)                                                                 | -        | -          | -        | This file.                                                                                                                        |
 
 <!-- AUTO-INDEX:END -->
 
 **This log is the decision index, and nobody types its rows.** 🗂️ Machined
-Indexes redraws it after every push from each record's own frontmatter.
+Indexes redraws it after every push to the default branch, from each record's
+own frontmatter.
 **Status** is Proposed, Accepted, Superseded, or Deprecated; **Date** is when
 the decision was made; **Evidence** links the research report(s) that informed
 it, or reads N/A.
@@ -91,6 +95,6 @@ old record **Superseded** and link the new one.
 
 <br />
 
-Built with ❤️ by the Engineering Team. Distributed under the MIT License.
+Built with ❤️ by the Engineering Team. Distributed under the terms in [LICENSE](/LICENSE).
 
 </div>

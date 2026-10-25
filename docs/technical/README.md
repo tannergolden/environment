@@ -24,10 +24,14 @@ How this project is built: its architecture and how its parts fit, the stack it
 runs on and where its source lives, and one document for each part that needs
 one.
 
+- **The architecture**: the system as it stands, its actors, building blocks,
+  interfaces and trust boundaries, from the
+  [Architecture Overview](../templates/technical/Architecture-Overview.md) seed.
 - **The stack and the source**: what the project is built with, and where each
   part of it lives.
-- **One folder per area**: `backend/`, `database/`, `infrastructure/`,
-  `interface/` and `testing/`, as the fill-in standards lay them out.
+- **One folder per area**: `backend/`, `benchmarks/`, `database/`,
+  `infrastructure/`, `interface/` and `testing/`, as the fill-in standards lay
+  them out.
 - **Designs, plans and research**: `designs/`, `plans/` and `research/`, from
   the Technical Design, Implementation Plan and Research Log templates.
 
@@ -53,8 +57,8 @@ the folder holds.
 
 <!-- AUTO-INDEX:END -->
 
-🗂️ Machined Indexes redraws this log after every push, from each document's own
-frontmatter.
+🗂️ Machined Indexes redraws this log after every push to the default branch,
+from each document's own frontmatter.
 
 ---
 
@@ -73,6 +77,6 @@ frontmatter.
 
 <br />
 
-Built with ❤️ by the Engineering Team. Distributed under the MIT License.
+Built with ❤️ by the Engineering Team. Distributed under the terms in [LICENSE](/LICENSE).
 
 </div>

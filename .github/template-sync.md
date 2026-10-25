@@ -43,6 +43,29 @@ is called, never copied, so a fix to how syncing works reaches this repository o
 
 ---
 
+## ✍️ What It Overwrites
+
+**A sync does overwrite files: every path the list keeps current, and nothing else.** That is how
+those files stay current with the template. In the pull request a sync opens:
+
+- **A file you had not changed** is overwritten with the template's version.
+- **A file you changed** is merged with the template's change. Where you both changed the same lines,
+  yours stays as it is, and the pull request shows the template's change.
+- **A file the template removed** is removed too, unless you had changed it.
+- **A folder log** between `AUTO-INDEX` markers is redrawn from your tree.
+
+**One page is shared, in two sections.** `docs/Prompts.md` is the template's down to its
+**✍️ This Repository's Prompts** section, and yours from there to the end. The template never changes
+your section, so a sync only ever brings changes to its own. To keep a change you made to the
+template's section, add `# keep mine: /docs/Prompts.md` under **Your rules**, as above.
+
+A path the list leaves to you, and any file the template does not ship, is never touched. So before
+you run it, look down the **Kept current** section for any file you put to a different use - a folder
+README you rewrote because this repository keeps a layout of its own, say - and put a `#` in front of
+its line. A file you deleted is switched off for you.
+
+---
+
 ## 📋 Choosing What Syncs
 
 `.github/template-sync` names every path the template ships, in `.gitignore` syntax:
@@ -102,8 +125,9 @@ Changes to the list take effect on the next sync you run. A few things worth kno
 | ⏸️ Waiting on a token                                  | A workflow file - see below                                                  |
 | ⛔ Skipped as unsafe                                   | A path that would reach outside this repository, so it is never written      |
 
-Files the template added or changed arrive **in your identity**: the footers name you, the licence
-holder is you, and links to the shared repositories the template relies on stay as they are.
+Files the template added or changed arrive **in your identity**: the licence holder, funding
+target, maintainer and README credit name you, a link meant as this repository names yours, and
+links to the shared repositories the template relies on stay as they are.
 
 **Folder logs are redrawn, never merged.** A table between `AUTO-INDEX` markers lists the files
 beside it, so a sync never calls it a conflict: it merges the words around the table and redraws
@@ -148,11 +172,11 @@ closes it.
 
 ## 🔑 The Token
 
-| Without a `BOT_ACCESS_TOKEN`                                       | With one                         |
-| :----------------------------------------------------------------- | :------------------------------- |
-| Files under `.github/workflows/` wait, named in the issue          | They arrive like any other file  |
-| The pull request cannot start required checks; re-run them by hand | CI runs on it                    |
-| A private template cannot be fetched at all                        | It can, if the token can read it |
+| Without a `BOT_ACCESS_TOKEN`                                                             | With one                         |
+| :--------------------------------------------------------------------------------------- | :------------------------------- |
+| Files under `.github/workflows/` wait, named in the issue                                | They arrive like any other file  |
+| The pull request's checks wait until someone with write access approves them on its page | CI runs on it                    |
+| A private template cannot be fetched at all                                              | It can, if the token can read it |
 
 `BOT_ACCESS_TOKEN` is the same secret every automation pull request here uses: a token with the
 `repo` and `workflow` scopes, or a fine-grained one with **Contents**, **Pull requests**, **Issues**
@@ -190,7 +214,10 @@ never followed on its own: change `ref:` in `.github/workflows/template-sync.yml
 The same stub runs differently in the template: there it **checks** that `.github/template-sync`
 names every file the template ships, and fails a pull request that adds a file without a line for
 it. Template releases are cut with **🏷️ Cut Release**, which only runs in the template; a merge to
-the template reaches a generated repository only once a release moves `v1`.
+the template reaches a generated repository only once a release moves `v1`. What each release
+changed is in the template's own `CHANGELOG.md`, which stays on the template and is never synced:
+read it [on the template](https://github.com/tannergolden/path/blob/Development/CHANGELOG.md) before
+you run a sync.
 
 What only the template needs is named under **Only ever in the template** in the list.
 Initialisation deleted each of those files from this repository and redrew its folder logs, so no
@@ -205,8 +232,8 @@ checks its own list on every change, as its template does, and a dispatch of **�
 still syncs it from the template it came from, as a mapped sync. Write that mapping in
 `.github/template-derive.json`, record its lock once, at the commit this repository was generated
 from, and name every file it ships in `.github/template-sync`: the standards' Template Sync guide
-shows how. Its other workflows keep running, since they are silent only in the two golden path
-templates; initialisation never runs in a template, and it releases with **🏷️ Cut Release**.
+shows how. Its other workflows keep running, since they are silent only in the golden path
+template; initialisation never runs in a template, and it releases with **🏷️ Cut Release**.
 
 ---
 
@@ -238,6 +265,6 @@ in the standards.
 
 <br />
 
-Built with ❤️ by the Engineering Team. Distributed under the terms in [LICENSE](../LICENSE).
+Built with ❤️ by the Engineering Team. Distributed under the terms in [LICENSE](/LICENSE).
 
 </div>
