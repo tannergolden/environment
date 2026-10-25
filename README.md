@@ -186,6 +186,7 @@ here.
 | [`.gitattributes`](.gitattributes)          | Git attributes - line endings, diffs, and what counts as binary                                                                        |
 | [`.gitignore`](.gitignore)                  | &#x1F5C4;&#xFE0F; Universal Ignore Patterns                                                                                            |
 | [`.markdownlint.json`](.markdownlint.json)  | Repository-wide markdownlint rules. Discovered by mechanism, which is why this lives at the root.                                      |
+| [`AGENTS.md`](AGENTS.md)                    | How AI coding agents work in environment: the universal rules first, then this repository's own.                                       |
 | [`LICENSE`](LICENSE)                        | MIT License                                                                                                                            |
 | [`README.md`](README.md)                    | This file.                                                                                                                             |
 
