@@ -19,8 +19,8 @@
 # changed the same lines, yours then stand.
 
 # --- Kept current -------------------------------------------------------------
-/.devcontainer/README.md
-/.devcontainer/devcontainer.json
+#/.devcontainer/README.md
+#/.devcontainer/devcontainer.json
 
 /.editorconfig
 /.env.example
@@ -174,3 +174,7 @@
 #/CHANGELOG.md
 
 # --- Your rules ---------------------------------------------------------------
+# The development container builds this repository's own Dockerfile, with
+# Docker inside it, so the two .devcontainer lines above are switched off.
+# keep mine: /.github/workflows/checks.yml
+# keep mine: /.github/dependabot.yml

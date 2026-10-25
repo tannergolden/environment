@@ -1,6 +1,6 @@
 <!--
 title: '🐳 DEVELOPMENT CONTAINER'
-description: 'The language-neutral development container this repository ships, and how to give it the toolchain your project needs.'
+description: 'The development container for working on the environment: the image this repository defines, built from its own Dockerfile, with Docker inside to build and test it.'
 type: index
 -->
 
@@ -10,9 +10,9 @@ type: index
 
 <a name="top"></a>
 
-**A container that can clone, edit, and commit in any language, with no toolchain yet.**
+**The machine this repository defines, built from the change you are making.**
 
-_Neutral until you name the language._
+_Work inside the toolchain you are changing._
 
 </div>
 
@@ -21,26 +21,26 @@ _Neutral until you name the language._
 ## 💡 What This Folder Is For
 
 Open the repository in a dev container - <kbd>Reopen in Container</kbd> in VS
-Code, or a Codespace - and this folder decides what you get: an Ubuntu base
-image, git, the common shell utilities, and a handful of editor extensions that
-are useful whatever you write.
+Code, or a Codespace - and this folder decides what you get: the image built
+from this repository's own [`Dockerfile`](../Dockerfile), not the published
+one. A change to [`toolchain/`](../toolchain/README.md) is tried in the
+container it makes, before 🏷️ Cut Release publishes it to every repository.
 
-**Nothing for your project's language is installed, on purpose.** This
-scaffold does not know what you are about to build, and a toolchain nobody
-needs costs every contributor a slow rebuild.
+It adds Docker, through the `docker-in-docker` feature, so `make test` builds
+the image and checks every tool in it from inside. When it is created it does
+what the template's container does: installs the scripts' requirements,
+switches on the [git hooks](../.github/scripts/hooks/README.md), and sets the
+commit message template. The image already holds gitleaks, which the
+`pre-commit` hook scans with.
 
-**Python is the one exception, and it is not a language choice.** The checks
-this repository runs on its own configuration are Python: the validator, the
-stub checker, the commit-message hook and their tests. So the container
-installs Python and the scripts' one requirement, PyYAML, and switches on the
-[git hooks](../.github/scripts/hooks/README.md) when it is created. A
-container that cannot run those checks cannot tell you whether CI will pass.
-It also installs gitleaks from Ubuntu's archive, so the `pre-commit` hook
-scans what you stage for secrets. That release trails gitleaks itself, and CI
-scans every pull request with the current one.
+**This is the one repository whose container builds the image.** Every other
+repository names the published image instead, as the
+[README](../README.md#-how-a-repository-uses-it) shows, which is why the two
+files here are switched off in [`.github/template-sync`](../.github/template-sync):
+a sync never puts the template's container back.
 
 `.gitattributes` marks this folder `export-ignore`, so `git archive` leaves it
-out of a source tarball. It is for developing the project, not for shipping it.
+out of a source tarball.
 
 ---
 
@@ -48,10 +48,10 @@ out of a source tarball. It is for developing the project, not for shipping it.
 
 <!-- AUTO-INDEX:BEGIN dir=. style=log -->
 
-| Entry                                    | Purpose                                                |
-| :--------------------------------------- | :----------------------------------------------------- |
-| [`devcontainer.json`](devcontainer.json) | Development container - deliberately language-neutral. |
-| [`README.md`](README.md)                 | This file.                                             |
+| Entry                                    | Purpose                                                                      |
+| :--------------------------------------- | :--------------------------------------------------------------------------- |
+| [`devcontainer.json`](devcontainer.json) | Development container for this repository: the image it defines, built here. |
+| [`README.md`](README.md)                 | This file.                                                                   |
 
 <!-- AUTO-INDEX:END -->
 
@@ -60,17 +60,15 @@ from what each file says about itself.
 
 ---
 
-## ⚙️ Giving It A Toolchain
+## ⚙️ Keeping It In Step
 
-- [ ] Uncomment the feature for your language under `features` in
-      `devcontainer.json`. The full catalogue is at
-      [containers.dev/features](https://containers.dev/features).
-- [ ] Append your bootstrap step to `postCreateCommand`, such as
-      `&& npm ci`, `&& pip install -e .` or `&& go mod download`, so a fresh
-      container is ready to build. Keep what is already there: it installs
-      what the repository's own checks need and switches on the hooks.
-- [ ] Add your language's editor extension to `customizations.vscode.extensions`.
-- [ ] Rebuild the container.
+- A change to the `Dockerfile` or to `toolchain/` takes effect here at the
+  next **Rebuild Container**.
+- The `docker-in-docker` feature is kept current by Dependabot's
+  `devcontainers` ecosystem, like any other feature.
+- Building behind a proxy that inspects TLS needs its CA bundle, which a
+  development container build cannot pass; `make build BUILD_FLAGS=...` from
+  a terminal can, as the [Makefile](../Makefile) says.
 
 > [!NOTE]
 > **There is no `settings` block, deliberately.** VS Code reads
@@ -86,7 +84,7 @@ as an error.
 
 <div align="center">
 
-**Equip it for this project, and for nothing else.**
+**Build the machine, then work inside it.**
 
 [↑ Back to Top](#top)
 

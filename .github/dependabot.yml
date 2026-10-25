@@ -125,6 +125,36 @@ updates:
         patterns:
           - '*'
 
+  # Keeps the Dockerfile's base, ubuntu:24.04, on its newest digest, so a
+  # release takes Ubuntu's security fixes. Only the digest moves: another
+  # Ubuntu release is a decision, so its tag is never proposed. The tools the
+  # image installs are pinned in toolchain/ and move by hand, with the
+  # standards' pins: toolchain/README.md says how.
+  - package-ecosystem: 'docker'
+    directory: '/'
+    schedule:
+      interval: 'monthly'
+      time: '07:00'
+      timezone: 'Etc/UTC'
+    cooldown:
+      default-days: 3
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: 'build'
+      include: 'scope'
+    labels:
+      - 'type: build'
+      - 'dependencies'
+    ignore:
+      - dependency-name: 'ubuntu'
+        update-types:
+          - 'version-update:semver-major'
+          - 'version-update:semver-minor'
+    groups:
+      base-image:
+        patterns:
+          - '*'
+
   # --- Enable the ones your project actually uses -------------------------
   #
   # Copy the first block above - INCLUDING the commit-message block, or that
