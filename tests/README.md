@@ -1,6 +1,6 @@
 <!--
 title: '🧪 TESTS'
-description: 'The test suites, from isolated units to whole user journeys, and how CI comes to run them.'
+description: 'The tests that hold the toolchain to its pins: the unit tests that need nothing but Python, and the image tests that check a built image.'
 type: index
 -->
 
@@ -10,9 +10,9 @@ type: index
 
 <a name="top"></a>
 
-**The test suites, one folder for each layer of the pyramid.**
+**The tests that hold the toolchain to its pins.**
 
-_Many fast tests. Few slow ones._
+_Fast checks on the pins, then the image itself._
 
 </div>
 
@@ -20,20 +20,24 @@ _Many fast tests. Few slow ones._
 
 ## 💡 What This Folder Is For
 
-This scaffold ships without tests on purpose. Wire your framework of choice
-into the `test-command` that
+Two kinds of test, run two ways:
+
+| Kind                        | Needs            | Run by                              | Proves                                                                     |
+| :-------------------------- | :--------------- | :---------------------------------- | :------------------------------------------------------------------------- |
+| `test_*.py`, here           | Python           | `make test-unit`                    | The pins are complete and agree, the installer refuses what it should      |
+| [`image/`](image/README.md) | Docker, an image | `make test-image`, which builds one | The image holds every tool at its pinned version, and the checks run in it |
+
+`make test` runs both, and is the `test-command` that
 [`.github/workflows/checks.yml`](../.github/workflows/checks.yml) runs on every
-pull request. Today that command runs the tests for `.github/scripts/`, so keep
-them in it when you add your own.
+pull request; 🏷️ Cut Release runs it again on the commit it is about to tag.
+None of them reaches the network: the installer's tests point its downloads at
+a local folder, and the image tests run every container with no network.
 
-The binding standard is the canonical
-[Testing Strategy](https://github.com/tannergolden/standards/blob/Development/docs/distribution/Testing-Strategy.md);
-the fill-in standards under `docs/templates/technical/testing/` are seeded for
-your own conventions inside it.
+Every test is standard-library `unittest`, and each reads what it expects from
+the pins themselves, so moving a version is the whole of changing its test.
 
-This directory is **yours from the first commit**. Nothing here syncs, and
-nothing upstream will ever write to it or delete from it: 🔄 Template Sync
-leaves this whole folder to you, this README included.
+This directory is **yours**. Nothing here syncs: 🔄 Template Sync leaves this
+whole folder to this repository, this README included.
 
 ---
 
@@ -41,23 +45,24 @@ leaves this whole folder to you, this README included.
 
 <!-- AUTO-INDEX:BEGIN dir=. style=log -->
 
-| Entry                                   | Purpose                                                                                                         |
-| :-------------------------------------- | :-------------------------------------------------------------------------------------------------------------- |
-| [`e2e/`](e2e/README.md)                 | End-to-end tests: whole user journeys driven against a running system, gating promotion to Preview and Release. |
-| [`integration/`](integration/README.md) | Integration tests: checks that cross a real boundary such as a database, the filesystem, or an HTTP service.    |
-| [`unit/`](unit/README.md)               | Unit tests: fast, isolated checks of one piece of logic each, run on every push.                                |
-| [`README.md`](README.md)                | This file.                                                                                                      |
+| Entry                                        | Purpose                                                                                                                                                              |
+| :------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`image/`](image/README.md)                  | The tests that check a built image: every tool at its pinned version, Python, Node.js and git, the development user, and the account's own checks running inside it. |
+| [`README.md`](README.md)                     | This file.                                                                                                                                                           |
+| [`test_cloud_setup.py`](test_cloud_setup.py) | Tests for the Claude Code cloud setup script.                                                                                                                        |
+| [`test_install.py`](test_install.py)         | Tests for the installer's refusals.                                                                                                                                  |
+| [`test_toolchain.py`](test_toolchain.py)     | Tests that the toolchain's pins are complete and agree with each other.                                                                                              |
 
 <!-- AUTO-INDEX:END -->
 
-🗂️ Machined Indexes redraws this log after every push. Each suite logs its own
-files.
+🗂️ Machined Indexes redraws this log after every push to the default branch,
+from what each file says about itself.
 
 ---
 
 <div align="center">
 
-**Catch it at the lowest level that can catch it.**
+**Every pin a promise, and a test that keeps it.**
 
 [↑ Back to Top](#top)
 
