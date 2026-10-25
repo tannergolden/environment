@@ -1,0 +1,4 @@
+# Docker sends a build only what the Dockerfile reads: the toolchain it
+# installs. Everything else stays out of the build context.
+*
+!toolchain/

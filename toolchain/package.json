@@ -1,0 +1,11 @@
+{
+  "name": "environment-toolchain",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The Node tools the image and the cloud setup install, at exact versions. See README.md.",
+  "license": "MIT",
+  "dependencies": {
+    "markdownlint-cli2": "0.24.0",
+    "prettier": "3.8.1"
+  }
+}
