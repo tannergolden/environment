@@ -1,25 +1,41 @@
-# Installed from tannergolden/standards. Edit freely: this file is YOURS.
+# --- This Repository's Own Release ---
 #
-# Publishes this template's releases: `vX.Y.Z` for the version, and the
-# moving `vX` that every repository generated from it follows through
-# 🔄 Template Sync. A merge to the default branch reaches no generated
-# repository until a release moves the major, so this is the moment a change
-# to the template becomes available to everything built from it - and each
-# repository takes it when its owner next runs 🔄 Template Sync.
+# 🏷️ Cut Release
 #
-# ⚠️ IT RUNS ONLY IN THE TEMPLATE, UNTIL YOU ADOPT IT. In a repository
-# generated from the template the job is inert, and initialisation leaves the
-# file where it is: `.github/template-sync` files it with yours, so no sync
-# ever overwrites what you make of it. If your repository is consumed by tag
-# too - an action, or a kit like the Markdown Kit - keep it, remove the `if:`
-# guard, and set `required-files` and `check-command` for what your
-# repository ships. Make your repository a template of its own and it runs
-# as it is, publishing the releases its own generated repositories follow.
-# Otherwise delete it.
+# Purpose: Publishes a version of the environment: the tag vX.Y.Z and the
+# moving vX, the image built from that commit for linux/amd64 and
+# linux/arm64 as ghcr.io/tannergolden/environment X.Y.Z, X and latest, and an
+# SBOM of each architecture on the release.
 #
-# A change that renames a file a generated repository depends on, or reshapes
-# a stub in a way a merge cannot carry, is BREAKING: release it as a new
-# major, which nothing follows until its owner decides to.
+# ADOPTED FROM THE TEMPLATE, as its note said to for a repository consumed by
+# tag: the `if:` guard that kept it inert is gone, and the jobs around the
+# standards' own name what this repository ships. The standards' release.yml
+# still does the tagging, called rather than copied, so its guards live in
+# one place: it refuses a commit that is not on the default branch and a
+# version that does not move forward.
+#
+# DRY RUN FIRST. `dry-run` is on by default, and runs everything that proves
+# a release while publishing nothing: it tests the image here, then builds
+# both architectures natively on runners of their own, and pushes no tag and
+# no image. Untick it to release.
+#
+# ⚠️ Moving `1` changes the image every repository's development container
+# names, on its next rebuild, without anyone on their side doing anything.
+# Treat a release as a production change to every repository at once.
+#
+# WHY THE IMAGE IS PUBLISHED IN THIS RUN. The standards' release.yml creates
+# the release with the run's own token, and GitHub starts no workflow from
+# what that token does, so a stub waiting on the release event would never
+# start. The image job runs here instead, after the tag, on the same commit.
+#
+# WHY THE TAGS ARE PLANNED HERE. The shared publisher tags an image with its
+# version and `latest`. The moving major that every devcontainer.json names
+# is this repository's own promise, so the plan step adds it, from the
+# version typed in.
+#
+# Every version stays: `keep-versions` turns off the prune the standards' Cut
+# Release runs for every other repository, because a pinned cloud setup
+# script downloads its files from its own tag, which has to keep resolving.
 
 name: '🏷️ Cut Release'
 
@@ -31,7 +47,12 @@ on:
         required: true
         type: string
       move-major:
-        description: 'Also move the major tag (vX) to this release'
+        description: "Also move the major tag (vX), and the image's X and latest, to this release"
+        required: false
+        type: boolean
+        default: true
+      dry-run:
+        description: 'Test the image and build both architectures, but publish nothing'
         required: false
         type: boolean
         default: true
@@ -43,15 +64,149 @@ concurrency:
 permissions: {}
 
 jobs:
-  release:
-    if: ${{ github.event.repository.is_template }}
+  verify:
+    name: '🧪 Verify The Release Candidate'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
-      contents: write # create tags, publish the release, prune superseded pages
+      contents: read # read the repository
+    outputs:
+      tags: ${{ steps.plan.outputs.tags }}
+    steps:
+      - name: '🛡️ Harden Runner'
+        uses: tannergolden/standards/.github/actions/harden@v1
+        with:
+          egress-policy: audit
+          notice: '🧪 Verify: builds and tests the image on the commit about to be released.'
+
+      - name: '📥 Checkout'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: '🏷️ Plan The Image Tags'
+        id: plan
+        env:
+          VERSION: ${{ inputs.version }}
+          MOVE_MAJOR: ${{ inputs.move-major }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "$VERSION" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error title=Release::'$VERSION' is not a vX.Y.Z version."
+            exit 1
+          fi
+          version="${VERSION#v}"
+          tags="$version"
+          if [ "$MOVE_MAJOR" = 'true' ]; then
+            tags="$tags ${version%%.*} latest"
+          fi
+          echo "tags=$tags" >> "$GITHUB_OUTPUT"
+          echo "The image will be tagged: $tags"
+
+      # The Python CI runs the checks on, with the scripts' requirements.
+      - name: '🧰 Setup Toolchain'
+        uses: tannergolden/standards/.github/actions/setup@v1
+
+      - name: '🧪 Lint, Then Build And Test The Image'
+        run: make lint test
+
+  release:
+    name: '🏷️ Publish Version & Move Major Tag'
+    needs: verify
+    if: ${{ !inputs.dry-run }}
+    permissions:
+      contents: write # create tags and publish the release
     uses: tannergolden/standards/.github/workflows/release.yml@v1
     with:
       version: ${{ inputs.version }}
       move-major: ${{ inputs.move-major }}
-      # A release no generated repository could sync from is refused here,
-      # rather than discovered by the first sync that tries.
-      required-files: '.github/template-sync .github/workflows/template-sync.yml'
-      check-command: 'python3 .github/scripts/validate-repository.py'
+      # What a consumer resolves at the tag: the Dockerfile the image is built
+      # from, and every file a pinned cloud setup script downloads.
+      required-files: >-
+        Dockerfile toolchain/install.sh toolchain/versions toolchain/requirements.txt
+        toolchain/package.json toolchain/package-lock.json setup/claude-cloud-setup.sh
+      check-command: 'make lint'
+      keep-versions: true
+
+  image:
+    name: '🐳 Publish The Image'
+    needs: [verify, release]
+    # After the tag, or, in a dry run, which skips the tag, after the tests.
+    # Never once the run is cancelled: stopping a release stops its image.
+    if: ${{ !cancelled() && needs.verify.result == 'success' && (needs.release.result == 'success' || (inputs.dry-run && needs.release.result == 'skipped')) }}
+    permissions:
+      attestations: write # record the image's provenance attestation
+      contents: read # read the repository
+      id-token: write # sign the provenance attestation
+      packages: write # push the image to GHCR under this repository
+    uses: tannergolden/standards/.github/workflows/publish-package.yml@v1
+    with:
+      container: true
+      container-platforms: 'linux/amd64,linux/arm64'
+      container-tags: ${{ needs.verify.outputs.tags }}
+      version: ${{ inputs.version }}
+      dry-run: ${{ inputs.dry-run }}
+
+  sbom:
+    name: "🧾 Attach Each Architecture's SBOM"
+    needs: image
+    if: ${{ !inputs.dry-run }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write # attach the SBOMs to the release
+      packages: read # read the images it catalogs, whatever their visibility
+    steps:
+      - name: '🛡️ Harden Runner'
+        uses: tannergolden/standards/.github/actions/harden@v1
+        with:
+          egress-policy: audit
+          notice: '🧾 SBOM: catalogs each published architecture and attaches it to the release.'
+
+      - name: '🔑 Registry Login'
+        env:
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GHCR_USER" --password-stdin
+
+      # A multi-architecture image is a list: each architecture is the image
+      # tagged with its suffix, which is the thing an SBOM can describe.
+      - name: '🏷️ Name Each Architecture'
+        id: images
+        env:
+          VERSION: ${{ inputs.version }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          image="ghcr.io/$(printf '%s' "$REPO" | tr '[:upper:]' '[:lower:]')"
+          echo "amd64=registry:${image}:${VERSION#v}-amd64" >> "$GITHUB_OUTPUT"
+          echo "arm64=registry:${image}:${VERSION#v}-arm64" >> "$GITHUB_OUTPUT"
+
+      - name: '🧾 SBOM: linux/amd64'
+        uses: tannergolden/standards/.github/actions/sbom@v1
+        with:
+          source: ${{ steps.images.outputs.amd64 }}
+          output: 'release/sbom-linux-amd64.cdx.json'
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: '🧾 SBOM: linux/arm64'
+        uses: tannergolden/standards/.github/actions/sbom@v1
+        with:
+          source: ${{ steps.images.outputs.arm64 }}
+          output: 'release/sbom-linux-arm64.cdx.json'
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: '📎 Attach To The Release'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(release/sbom-*.cdx.json)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::warning title=No SBOM::No SBOM was produced, so the release carries none. The image and its provenance attestation are published."
+            exit 0
+          fi
+          gh release upload "$VERSION" "${files[@]}" --repo "$GITHUB_REPOSITORY" --clobber
+          echo "Attached ${#files[@]} SBOM(s) to $VERSION."
