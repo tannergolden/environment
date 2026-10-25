@@ -17,6 +17,7 @@ Run them:
 
 from __future__ import annotations
 
+import hashlib
 import os
 import pathlib
 import re
@@ -27,6 +28,8 @@ import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 WANTED = re.compile(r'could not download (file://\S+),')
+# Each tool, by the word its download URL carries.
+TOOLS = ('ACTIONLINT', 'GITLEAKS', 'LYCHEE', 'SHELLCHECK', 'TYPOS', 'NODE')
 
 
 class Installer:
@@ -77,6 +80,35 @@ class InstallerTests(unittest.TestCase):
         result = self.installer.run('--user')
         self.assertEqual(result.returncode, 1, result.stderr)
         self.assertIn('is not the file pinned in versions', result.stderr)
+        self.assertIn('so nothing was installed', result.stderr)
+        self.assertEqual(self.installer.installed(), [])
+
+    def test_checks_every_download_before_it_installs_any(self) -> None:
+        # Every download arrives, and each matches its pin but the last one,
+        # typos', so the refusal comes once the others are fetched and checked.
+        versions = self.installer.root / 'toolchain' / 'versions'
+        fetched: list[str] = []
+        for _ in range(len(TOOLS) + 1):
+            result = self.installer.run('--user')
+            wanted = WANTED.search(result.stderr)
+            if not wanted:
+                break
+            stand_in = pathlib.Path(wanted.group(1).removeprefix('file://'))
+            url = str(stand_in.relative_to(self.installer.mirror))
+            tool = next(name for name in TOOLS if name.lower() in url)
+            stand_in.parent.mkdir(parents=True, exist_ok=True)
+            stand_in.write_bytes(f'a stand-in for {tool}\n'.encode())
+            fetched.append(tool)
+            if tool != 'TYPOS':
+                digest = hashlib.sha256(stand_in.read_bytes()).hexdigest()
+                text = re.sub(rf'(?m)^({tool}_SHA256_(?:AMD64|ARM64))=.*$', rf'\g<1>={digest}',
+                              versions.read_text(encoding='utf-8'))
+                versions.write_text(text, encoding='utf-8')
+
+        self.assertEqual(fetched[-1:], ['TYPOS'], fetched)
+        self.assertLessEqual({'ACTIONLINT', 'GITLEAKS', 'LYCHEE', 'SHELLCHECK'}, set(fetched))
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertRegex(result.stderr, r'crate-ci/typos/\S+ is not the file pinned in versions')
         self.assertIn('so nothing was installed', result.stderr)
         self.assertEqual(self.installer.installed(), [])
 

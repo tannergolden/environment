@@ -42,6 +42,12 @@ def normalise(name: str) -> str:
     return re.sub(r'[-_.]+', '-', name).lower()
 
 
+def installer_commands(needle: str) -> list[str]:
+    """Each command in install.sh that contains `needle`, its continued lines joined."""
+    script = re.sub(r'\\\n\s*', ' ', (TOOLCHAIN / 'install.sh').read_text(encoding='utf-8'))
+    return [line for line in script.splitlines() if needle in line and not line.lstrip().startswith('#')]
+
+
 class VersionsTests(unittest.TestCase):
     def test_every_tool_has_a_version_and_a_sum_per_architecture(self) -> None:
         pins = read_versions()
@@ -88,6 +94,13 @@ class PythonPinsTests(unittest.TestCase):
                 with self.subTest(package=block.split('==')[0]):
                     self.assertIn('--hash=sha256:', block)
 
+    def test_the_installer_takes_only_hashed_wheels_and_resolves_nothing(self) -> None:
+        commands = installer_commands('-m pip install')
+        self.assertEqual(len(commands), 1, commands)
+        for flag in ('--require-hashes', '--no-deps', '--only-binary=:all:', '--requirement "$here/requirements.txt"'):
+            with self.subTest(flag=flag):
+                self.assertIn(flag, commands[0])
+
 
 class NodePinsTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -113,6 +126,12 @@ class NodePinsTests(unittest.TestCase):
                 with self.subTest(package=path):
                     self.assertTrue(entry.get('integrity', '').startswith('sha512-'))
                     self.assertFalse(entry.get('hasInstallScript', False))
+
+    def test_the_installer_installs_the_lock_and_runs_no_script(self) -> None:
+        commands = installer_commands('"$npm" ')
+        self.assertEqual(len(commands), 1, commands)
+        self.assertIn('"$npm" ci ', commands[0])
+        self.assertIn('--ignore-scripts', commands[0])
 
 
 class DockerfileTests(unittest.TestCase):
