@@ -71,31 +71,63 @@ _The universal rules first, then this repository's own._
 
 ## Commands
 
-<!-- How to install, lint, test and build, exactly as CI runs them. -->
+- `make lint`: the repository validator, and shellcheck on `toolchain/install.sh` and `setup/claude-cloud-setup.sh`.
+- `make test-unit`: the tests that need no Docker, in `.github/scripts/` and `tests/`.
+- `make test`: `make test-unit`, then builds the image and runs `tests/image/` against it. It needs Docker. Behind a
+  proxy that inspects TLS, as a Claude Code cloud session's is, pass the CA bundle:
+  `make test BUILD_FLAGS='--secret id=ca-bundle,src=<bundle>'`.
+- `make lock`: recompiles `toolchain/requirements.txt` and `toolchain/package-lock.json` after a change to
+  `requirements.in` or `package.json`. It needs uv and npm.
+- `make cloud-setup VERSION=vX.Y.Z`: prints the cloud setup script pinned to that release's tag.
 
 ## Definition of done
 
-<!-- What has to be true before an agent may call a change finished. -->
+- `make lint` and `make test` pass, the image tests included, and their output is in your report.
+- A moved version changes its pin and both of its SHA-256 sums together, with `make lock` run when a lock depends on
+  it, in one commit.
+- Every folder's `README.md` logs its files: redraw them with the standards' `update-doc-indexes.py --tree --write`
+  in the same commit.
 
 ## Conventions
 
-<!-- What this repository does differently from the standards, and why. -->
+- A version mirrors what the standards' checks run wherever they pin one. The header of `toolchain/versions` says
+  where each comes from, and which checksums the project itself publishes.
+- Nothing unchecked is installed: every download has a SHA-256 pin, pip takes only hashed wheels, and npm runs no
+  install scripts. A tool without a pin is not added.
+- `toolchain/install.sh` is POSIX sh, since the image runs it with `/bin/sh`; the cloud setup script is bash. Python
+  is the standard library only, with single quotes and `from __future__ import annotations`, and tests are
+  `unittest`.
 
 ## Where things live
 
-<!-- The folders an agent needs, and what each one holds. -->
+| Path                                   | Holds                                                                         |
+| :------------------------------------- | :---------------------------------------------------------------------------- |
+| `Dockerfile`                           | The image: the base by digest, Ubuntu's packages, the user, and the installer |
+| `toolchain/`                           | Every pin, and the installer the image and a cloud session both run           |
+| `setup/`                               | The Claude Code cloud setup script, with placeholders for a release's pins    |
+| `tests/`, `tests/image/`               | The unit tests, and the tests that check a built image                        |
+| `.github/scripts/print-cloud-setup.py` | Fills the setup script's pins from a release's tag                            |
+| `.github/workflows/cut-release.yml`    | The release: the tags, the image for both architectures, and their SBOMs      |
 
 ## Gotchas
 
-<!-- What has bitten someone before: generated files, slow tests, fragile steps. -->
+- The image tests need `ENVIRONMENT_IMAGE` and fail without it, rather than pass having checked nothing.
+  `unittest discover -s tests` leaves `tests/image/` out on purpose: it has no `__init__.py`.
+- The cloud setup script must exit 0 and never call `exit`: it shares the setup-script field with the intelligence
+  hub's, and a failing setup script stops a session from starting.
+- `markdownlint-cli2` has no version flag; its `--help` names the version and exits 2.
+- The two `.devcontainer` files are switched off in `.github/template-sync`, so a sync never puts the template's
+  container back.
 
 ## Ask first
 
-<!-- Changes an agent proposes and waits on, rather than makes. -->
+- Cutting a release: moving `1` changes every repository's development container at its next rebuild.
+- Moving a version the standards pin before the standards move it.
+- Adding a tool to the image, which every repository's container then carries.
 
 ## Overrides
 
-<!-- One line per Default this repository changes, as `- WORK-002: why`. Invariants cannot be overridden. -->
+None: every Default holds here.
 
 ---
 
