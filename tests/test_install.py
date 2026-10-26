@@ -50,7 +50,8 @@ class Installer:
         return subprocess.run(['sh', str(self.root / 'toolchain' / 'install.sh'), *args],
                               env=env, capture_output=True, text=True, check=False)
 
-    def serve_every_archive(self, wrong: str = '', **extra: str) -> tuple[list[str], subprocess.CompletedProcess[str]]:
+    def serve_every_archive(self, wrong: str = '',
+                            **extra: str) -> tuple[list[str], subprocess.CompletedProcess[str]]:
         """Serves each archive the installer asks for, pinned to match, but `wrong`'s, and runs it once more."""
         versions = self.root / 'toolchain' / 'versions'
         fetched: list[str] = []

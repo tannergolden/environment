@@ -17,7 +17,9 @@
 # package-lock.json. pip resolves nothing of its own and builds nothing from
 # source, and npm ci runs no install scripts. Only then is anything
 # installed, so a mismatch, or a host that cannot be reached, stops the
-# install before it has changed anything.
+# install before it has changed anything. What can still fail after that is
+# local, such as a full disk: the installer says so, puts back any command
+# it had moved aside, and a second run finishes the job.
 #
 #     sh install.sh           system-wide, as root: what the image runs
 #     sh install.sh --user    for this user, under ~/.local: what a cloud
@@ -97,14 +99,6 @@ for tool in curl tar xz python3; do
   command -v "$tool" >/dev/null 2>&1 || fail "$tool is not installed, so nothing was"
 done
 python3 -m pip --version >/dev/null 2>&1 || fail 'pip is not installed for python3, so nothing was'
-# The lock is compiled for Python 3.12 and newer: on an older one, pytest
-# would install without the backports it needs there.
-python3 -c 'import sys; sys.exit(sys.version_info < (3, 12))' \
-  || fail "python3 is $(python3 -c 'import platform; print(platform.python_version())'), and the toolchain needs 3.12 or newer, so nothing was installed"
-if [ "$mode" = user ]; then
-  python3 -c 'import site, sys; sys.exit(not site.ENABLE_USER_SITE)' \
-    || fail 'python3 cannot install for this user, as inside a virtual environment, so nothing was installed'
-fi
 
 [ "$(uname -s)" = Linux ] || fail "the toolchain is built for Linux, not $(uname -s)"
 case $(uname -m) in
@@ -114,8 +108,20 @@ case $(uname -m) in
 esac
 
 work=$(mktemp -d)
-trap 'rm -rf "$work"' EXIT
-# A stopped install still clears its scratch folder.
+stage=checking
+# Clears the scratch folder however the installer ends, and says how far a
+# stopped or failed run got.
+finish() {
+  status=$?
+  rm -rf "$work"
+  [ "$status" -ne 0 ] || return 0
+  if [ "$stage" = installing ]; then
+    say "stopped partway through installing into $bin, so some tools there may be new and some as they were; run it again to finish"
+  elif [ "$status" -ge 128 ]; then
+    say 'stopped before it installed anything, so nothing was'
+  fi
+}
+trap finish EXIT
 trap 'exit 143' TERM
 trap 'exit 130' INT
 
@@ -134,11 +140,13 @@ fetch() {
 
 # --- Download and check everything first ------------------------------------
 
-# A machine's own Node.js is kept only at the pinned major or newer:
-# markdownlint-cli2 needs Node.js 22.
+# A machine's own Node.js is kept only at the pinned major or newer, since
+# markdownlint-cli2 needs Node.js 22, and never the one a previous run
+# linked into $bin, which is the toolchain's own.
 node_version=$(pin NODE_VERSION)
+machine_node=$(command -v node 2>/dev/null || true)
 keep_node=no
-if [ "$mode" = user ] && command -v node >/dev/null 2>&1 \
+if [ "$mode" = user ] && [ -n "$machine_node" ] && [ "$machine_node" != "$bin/node" ] \
   && [ "$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)" -ge "${node_version%%.*}" ]; then
   keep_node=yes
 fi
@@ -176,14 +184,26 @@ else
 fi
 mkdir "$work/npm"
 cp "$here/package.json" "$here/package-lock.json" "$work/npm/"
-# The download cache goes with the scratch folder, rather than staying in
-# the image or in the user's ~/.npm.
-(cd "$work/npm" && "$npm" ci --omit=dev --ignore-scripts --no-audit --no-fund --no-update-notifier \
+# The download cache and npm's own temporary files go with the scratch
+# folder, rather than staying in the image or in the user's home.
+(cd "$work/npm" && TMPDIR="$work" "$npm" ci --omit=dev --ignore-scripts --no-audit --no-fund --no-update-notifier \
   --loglevel=error --cache "$work/npm-cache") \
   || fail 'npm could not install every package package-lock.json pins, each matching its hash, so nothing was installed'
 
+# Last, whether this Python can take them. The lock is compiled for Python
+# 3.12 and newer: on an older one, pytest would install without the backports
+# it needs there.
+python3 -c 'import sys; sys.exit(sys.version_info < (3, 12))' \
+  || fail "python3 is $(python3 -c 'import platform; print(platform.python_version())'), and the toolchain needs 3.12 or newer, so nothing was installed"
+if [ "$mode" = user ]; then
+  python3 -c 'import site, sys; sys.exit(not site.ENABLE_USER_SITE)' \
+    || fail 'python3 cannot install for this user, as inside a virtual environment, so nothing was installed'
+fi
+
 # --- Install -----------------------------------------------------------------
 
+say "every download matched its pin; installing into $bin"
+stage=installing
 mkdir -p "$data/licenses" "$bin"
 
 # A command is replaced, never written through: a link left by another
@@ -196,6 +216,9 @@ replace() {
 if [ "$keep_node" = yes ]; then
   say "keeping this machine's Node.js $(node --version)"
 else
+  # For a user, the folder is the toolchain's own: a previous version goes
+  # first, so two never mix.
+  [ "$mode" = system ] || rm -rf "$node_root"
   mkdir -p "$node_root"
   tar -xJf "$work/node.archive" -C "$node_root" --strip-components=1 --no-same-owner
   if [ "$mode" = user ]; then
@@ -224,21 +247,33 @@ done
 # lets pip install beside it, which is the point here: these pins are what
 # `python3` imports and runs, so `python3 -m pytest` and the repository
 # validator's `import yaml` get exactly them. The wheels come from the scratch
-# folder, already checked, so nothing is fetched now. Both places this runs,
-# an image build and a cloud session, run it as root on purpose, so pip is
-# told not to warn about that.
+# folder, already checked, so nothing is fetched now, and --force-reinstall
+# writes every command again, even for a package already in place. Both
+# places this runs, an image build and a cloud session, run it as root on
+# purpose, so pip is told not to warn about that. A link another installer
+# left is moved aside first, and put back if pip fails.
 for command in pytest py.test pygmentize ruff zizmor; do
-  [ ! -L "$bin/$command" ] || replace "$command"
+  [ ! -L "$bin/$command" ] || mv "$bin/$command" "$work/moved-$command"
 done
 # shellcheck disable=SC2086 # deliberately unquoted: empty system-wide, --user for a user
-PIP_ROOT_USER_ACTION=ignore python3 -m pip install $pip_scope --break-system-packages --quiet --no-cache-dir \
+if ! PIP_ROOT_USER_ACTION=ignore python3 -m pip install $pip_scope --break-system-packages --quiet --no-cache-dir \
   --disable-pip-version-check --no-warn-script-location --no-index --find-links "$work/wheels" \
-  --require-hashes --no-deps --only-binary=:all: --requirement "$here/requirements.txt"
+  --force-reinstall --require-hashes --no-deps --only-binary=:all: --requirement "$here/requirements.txt"; then
+  for moved in "$work"/moved-*; do
+    [ ! -L "$moved" ] || mv "$moved" "$bin/${moved#"$work"/moved-}"
+  done
+  fail 'pip could not install the wheels it had checked; the commands it had moved aside are back'
+fi
 
-rm -rf "$data/npm"
-mkdir -p "$data/npm"
-cp "$here/package.json" "$here/package-lock.json" "$data/npm/"
-mv "$work/npm/node_modules" "$data/npm/node_modules"
+# The new npm store is put together beside the old one, then swapped in, so
+# a failed copy leaves the old one working.
+rm -rf "$data/npm.new" "$data/npm.old"
+mkdir -p "$data/npm.new"
+cp "$here/package.json" "$here/package-lock.json" "$data/npm.new/"
+mv "$work/npm/node_modules" "$data/npm.new/node_modules"
+[ ! -d "$data/npm" ] || mv "$data/npm" "$data/npm.old"
+mv "$data/npm.new" "$data/npm"
+rm -rf "$data/npm.old"
 for command in markdownlint-cli2 prettier; do
   replace "$command"
   ln -s "$data/npm/node_modules/.bin/$command" "$bin/$command"

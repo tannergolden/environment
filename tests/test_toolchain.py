@@ -48,6 +48,39 @@ def installer_commands(needle: str) -> list[str]:
     return [line for line in script.splitlines() if needle in line and not line.lstrip().startswith('#')]
 
 
+def installer_halves() -> tuple[str, str]:
+    """install.sh before its install marker, where everything is checked, and after it."""
+    checks, marker, installs = (TOOLCHAIN / 'install.sh').read_text(encoding='utf-8').partition('# --- Install ')
+    return checks, installs if marker else ''
+
+
+def admits(version: str, spec: str) -> bool:
+    """Whether a Node.js `engines` range, such as '>=20.19.0' or '^20.19.0 || >=22', admits `version`."""
+    have = tuple(int(part) for part in version.split('.'))
+    for alternative in spec.split('||'):
+        fits = True
+        for op, number in re.findall(r'(>=|<=|>|<|\^|~|=)?\s*v?([0-9]+(?:\.[0-9]+){0,2})', alternative):
+            want = tuple(int(part) for part in number.split('.'))
+            full = want + (0,) * (3 - len(want))
+            if op == '>=':
+                fits &= have >= full
+            elif op == '>':
+                fits &= have > full
+            elif op == '<=':
+                fits &= have[:len(want)] <= want
+            elif op == '<':
+                fits &= have < full
+            elif op == '^':
+                fits &= have >= full and have[0] == full[0]
+            elif op == '~':
+                fits &= have >= full and have[:2] == full[:2]
+            else:
+                fits &= have[:len(want)] == want
+        if fits:
+            return True
+    return False
+
+
 class VersionsTests(unittest.TestCase):
     def test_every_tool_has_a_version_and_a_sum_per_architecture(self) -> None:
         pins = read_versions()
@@ -113,6 +146,10 @@ class PythonPinsTests(unittest.TestCase):
             for flag in flags:
                 with self.subTest(step=step, flag=flag):
                     self.assertIn(flag, commands[0])
+        checks, installs = installer_halves()
+        self.assertIn('-m pip download', checks)
+        self.assertNotIn('-m pip download', installs)
+        self.assertIn('-m pip install', installs)
 
 
 class NodePinsTests(unittest.TestCase):
@@ -145,19 +182,39 @@ class NodePinsTests(unittest.TestCase):
         self.assertEqual(len(commands), 1, commands)
         self.assertIn('"$npm" ci ', commands[0])
         self.assertIn('--ignore-scripts', commands[0])
+        # Run in the first half, into the scratch folder, before anything is
+        # installed.
+        checks, installs = installer_halves()
+        self.assertIn('"$npm" ci ', checks)
+        self.assertNotIn('"$npm" ', installs)
 
     def test_every_package_runs_on_the_node_it_is_given(self) -> None:
-        # The image runs the pinned Node.js, and a machine keeps its own only
-        # at that major or newer, so no package may need a newer one.
-        major = int(read_versions()['NODE_VERSION'].split('.')[0])
+        # The image runs the pinned Node.js, and a machine keeps its own at
+        # that major or newer, so every package has to run on both the pinned
+        # version and the first release of its major.
+        pinned = read_versions()['NODE_VERSION']
+        oldest = pinned.split('.')[0] + '.0.0'
         installer = (TOOLCHAIN / 'install.sh').read_text(encoding='utf-8')
         self.assertIn('-ge "${node_version%%.*}"', installer)
         for path, entry in self.lock['packages'].items():
             engines = entry.get('engines')
-            node = engines.get('node', '') if isinstance(engines, dict) else ''
-            for floor in re.findall(r'>=\s*v?([0-9]+)', node):
-                with self.subTest(package=path, engines=node):
-                    self.assertLessEqual(int(floor), major)
+            spec = engines.get('node') if isinstance(engines, dict) else None
+            for version in (oldest, pinned) if spec else ():
+                with self.subTest(package=path, engines=spec, node=version):
+                    self.assertTrue(admits(version, spec))
+
+    def test_the_range_check_reads_npm_ranges(self) -> None:
+        cases = (
+            ('22.0.0', '>=22', True),
+            ('20.19.0', '>=22', False),
+            ('24.1.0', '>= 18', True),
+            ('22.12.0', '^20.19.0 || ^22.12.0 || >=24.0.0', True),
+            ('22.0.0', '^20.19.0 || ^22.12.0 || >=24.0.0', False),
+            ('22.5.0', '~22.4', False),
+        )
+        for version, spec, expected in cases:
+            with self.subTest(version=version, spec=spec):
+                self.assertEqual(admits(version, spec), expected)
 
 
 class DockerfileTests(unittest.TestCase):
