@@ -14,6 +14,14 @@ test-image` builds one and sets it. Every container runs with no network, so
 nothing here depends on what is reachable.
 
     make test-image
+
+ENVIRONMENT_IMAGE=host checks the tools on this machine's PATH instead, as
+the toolchain action's job in checks.yml does after installing them. Only the
+tests about the tools run then: the image's user, label and Python are not
+the machine's. A machine keeps its own Node.js at the pinned major or newer,
+so there Node.js only has to be that new.
+
+    ENVIRONMENT_IMAGE=host python3 -m unittest discover -s tests/image -p 'test_*.py'
 """
 
 from __future__ import annotations
@@ -28,7 +36,9 @@ import unittest
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 TOOLCHAIN = ROOT / 'toolchain'
 IMAGE = os.environ.get('ENVIRONMENT_IMAGE', '')
+HOST = IMAGE == 'host'
 FIRST_VERSION = re.compile(r'[0-9]+\.[0-9]+\.[0-9]+')
+image_only = unittest.skipIf(HOST, "a property of the image, not of this machine's tools")
 
 
 def pins() -> dict[str, str]:
@@ -46,6 +56,8 @@ def pins() -> dict[str, str]:
 
 
 def run(*command: str, user: str = 'root', work: bool = False) -> subprocess.CompletedProcess[str]:
+    if HOST:
+        return subprocess.run(list(command), capture_output=True, text=True, check=False)
     args = ['docker', 'run', '--rm', '--network', 'none', '--user', user]
     if work:
         # The checkout belongs to whoever ran the tests, so git is told to
@@ -92,9 +104,13 @@ class ImageTests(unittest.TestCase):
         result = run('python3', '-c', 'import sys, yaml; print(sys.version.split()[0], yaml.__version__)')
         self.assertEqual(result.returncode, 0, result.stderr)
         python, pyyaml = result.stdout.split()
-        self.assertTrue(python.startswith('3.12.'), python)
+        if HOST:
+            self.assertGreaterEqual(tuple(int(part) for part in python.split('.')[:2]), (3, 12), python)
+        else:
+            self.assertTrue(python.startswith('3.12.'), python)
         self.assertEqual(pyyaml, self.pins['pyyaml'])
 
+    @image_only
     def test_pip_installs_for_the_user_without_a_flag(self) -> None:
         marker = 'import os, sysconfig; print(os.path.exists(os.path.join(sysconfig.get_path("stdlib"), "EXTERNALLY-MANAGED")))'
         result = run('python3', '-c', marker)
@@ -103,24 +119,32 @@ class ImageTests(unittest.TestCase):
 
     def test_node_is_its_pinned_version(self) -> None:
         result = run('node', '--version')
-        self.assertEqual(result.stdout.strip(), 'v' + self.pins['NODE_VERSION'])
+        if HOST:
+            major = int(result.stdout.strip().lstrip('v').split('.')[0])
+            self.assertGreaterEqual(major, int(self.pins['NODE_VERSION'].split('.')[0]), result.stdout)
+        else:
+            self.assertEqual(result.stdout.strip(), 'v' + self.pins['NODE_VERSION'])
         self.assertEqual(run('npm', '--version').returncode, 0)
 
+    @image_only
     def test_git_is_new_enough_for_the_standards(self) -> None:
         result = run('git', '--version')
         major, minor = (int(part) for part in FIRST_VERSION.search(result.stdout).group(0).split('.')[:2])
         self.assertGreaterEqual((major, minor), (2, 40))
 
+    @image_only
     def test_the_development_user_has_uid_1000_and_sudo(self) -> None:
         result = run('sh', '-c', 'id -u && sudo -n true && echo sudo', user='vscode')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.split(), ['1000', 'sudo'])
 
+    @image_only
     def test_a_development_container_works_as_that_user(self) -> None:
         label = subprocess.run(['docker', 'inspect', '--format', '{{ index .Config.Labels "devcontainer.metadata" }}', IMAGE],
                                capture_output=True, text=True, check=True).stdout
         self.assertEqual(json.loads(label), [{'remoteUser': 'vscode'}])
 
+    @image_only
     def test_the_checks_run_here(self) -> None:
         for command in (('python3', '.github/scripts/validate-repository.py'), ('actionlint',)):
             with self.subTest(command=command[0]):

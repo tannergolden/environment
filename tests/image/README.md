@@ -37,6 +37,13 @@ container work as that user, and that the repository validator and actionlint
 run inside the image. Every container runs with no network. Without
 `ENVIRONMENT_IMAGE` they fail, rather than pass having checked nothing.
 
+`ENVIRONMENT_IMAGE=host` checks the tools on this machine's `PATH` instead,
+as 🚦 Checks' `toolchain` job does after the
+[toolchain action](../../.github/actions/toolchain/README.md) installs them.
+Only the tests about the tools run then, and the ones about the image itself
+skip. A machine keeps its own Node.js at the pinned major or newer, so there
+Node.js only has to be that new.
+
 ---
 
 ## 📝 File Log

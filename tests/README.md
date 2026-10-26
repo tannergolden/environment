@@ -27,6 +27,10 @@ Two kinds of test, run two ways:
 | `test_*.py`, here           | Python           | `make test-unit`                    | The pins are complete and agree, the installer refuses what it should                        |
 | [`image/`](image/README.md) | Docker, an image | `make test-image`, which builds one | The image holds every tool at its pinned version, and the validator and actionlint run in it |
 
+The image tests can also check the tools on a machine's `PATH`: 🚦 Checks'
+`toolchain` job runs them that way after the toolchain action, as
+[`image/`](image/README.md) says.
+
 `make test` runs both, and is the `test-command` that
 [`.github/workflows/checks.yml`](../.github/workflows/checks.yml) runs on every
 pull request; 🏷️ Cut Release runs it again on the commit it is about to tag.
@@ -49,6 +53,7 @@ whole folder to this repository, this README included.
 | :------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [`image/`](image/README.md)                  | The tests that check a built image: every tool at its pinned version, Python, Node.js and git, the development user, and the repository validator and actionlint running inside it. |
 | [`README.md`](README.md)                     | This file.                                                                                                                                                                          |
+| [`test_action.py`](test_action.py)           | Tests that the toolchain action installs this release's pins, or fails.                                                                                                             |
 | [`test_cloud_setup.py`](test_cloud_setup.py) | Tests for the Claude Code cloud setup script.                                                                                                                                       |
 | [`test_install.py`](test_install.py)         | Tests for the installer's refusals.                                                                                                                                                 |
 | [`test_toolchain.py`](test_toolchain.py)     | Tests that the toolchain's pins are complete and agree with each other.                                                                                                             |

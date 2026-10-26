@@ -41,9 +41,10 @@ repository calls from nowhere else.
 
 <!-- AUTO-INDEX:BEGIN dir=. style=log -->
 
-| Entry                    | Purpose    |
-| :----------------------- | :--------- |
-| [`README.md`](README.md) | This file. |
+| Entry                               | Purpose                                                                                                                                                      |
+| :---------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`toolchain/`](toolchain/README.md) | The composite action that installs the pinned check tools in a GitHub Actions job, from the release it is called at, so CI runs the same tools as the image. |
+| [`README.md`](README.md)            | This file.                                                                                                                                                   |
 
 <!-- AUTO-INDEX:END -->
 

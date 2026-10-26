@@ -32,6 +32,8 @@ without a pull request. Three files run steps of their own instead:
 `scorecard.yml`, whose score is only accepted from a workflow that keeps to
 OpenSSF Scorecard's rules about its own steps, and `cut-release.yml`, which
 tests, publishes and catalogs the image around the standards' release.
+`checks.yml` adds one job of its own, `toolchain`, which runs this
+repository's toolchain action on a runner and checks every tool it installs.
 
 The stubs are **grouped by concern** - every read-only gate in `checks.yml`,
 everything that reacts to people in `governance.yml` - so one push produces one

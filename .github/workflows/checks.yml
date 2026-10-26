@@ -126,3 +126,38 @@ jobs:
     permissions:
       contents: read # read the repository
     uses: tannergolden/standards/.github/workflows/lint-workflows.yml@v1
+
+  toolchain:
+    # Proves this repository's toolchain action on a real runner, as the
+    # standards' checks will call it: every tool installed, each at the
+    # version it is pinned at, and the lint run with the pinned shellcheck.
+    # The image's own tests run in the ci job; here only the ones about the
+    # tools do, against the runner's PATH.
+    if: ${{ github.event_name != 'push' || github.ref_name == github.event.repository.default_branch }}
+    name: '🧰 Toolchain Action'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read # check out the repository
+    steps:
+      - name: '🛡️ Harden Runner'
+        uses: tannergolden/standards/.github/actions/harden@v1
+        with:
+          egress-policy: audit
+          notice: "🧰 Toolchain: installs the pinned tools with this repository's action, then checks each one."
+
+      - name: '📥 Checkout'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: '🧰 Toolchain'
+        uses: ./.github/actions/toolchain
+
+      - name: '🔢 Check Each Version'
+        env:
+          ENVIRONMENT_IMAGE: host
+        run: python3 -m unittest discover -s tests/image -p 'test_*.py'
+
+      - name: '🧹 Lint With The Pinned Tools'
+        run: make lint

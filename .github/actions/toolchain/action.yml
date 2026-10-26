@@ -1,0 +1,56 @@
+# --- Composite Action ---
+#
+# 🧰 Toolchain
+#
+# Installs every check tool the environment pins, each at its pinned version,
+# for the job's user, and puts them on PATH ahead of the runner's own copies.
+# It runs toolchain/install.sh, the installer that builds the image and sets
+# up a Claude Code cloud session, from the release this action is called at,
+# so a check in CI runs the same tools as one in the image.
+#
+# Used as:
+#
+#   - uses: tannergolden/environment/.github/actions/toolchain@v1
+#
+# THE INSTALLER COMES WITH THE ACTION. GitHub fetches the action from this
+# repository's source archive at the tag the caller names, toolchain/ with
+# it, so the installer and its pins need no checksum of their own. It checks
+# every download against its pin before it installs anything.
+#
+# A FAILURE FAILS THE JOB, where the cloud setup never fails a session. A
+# check that ran on whatever the runner carries would pass or fail for the
+# wrong reason, so there is no fallback.
+#
+# CALL IT IN A JOB THAT RUNS CHECKS, not before a repository's own tests. Its
+# Python packages go into the user site of the `python3` on PATH, which comes
+# ahead of that Python's site-packages, so a repository's own pytest or
+# PyYAML installed there would be shadowed by these.
+#
+# ---
+
+name: '🧰 Toolchain'
+description: "Installs the environment's pinned check tools for this job, ahead of the runner's own, and fails the job if any download does not match its pin."
+
+runs:
+  using: composite
+  steps:
+    - name: '🧰 Install The Toolchain'
+      shell: sh
+      env:
+        INSTALLER: ${{ github.action_path }}/../../../toolchain/install.sh
+      run: sh "$INSTALLER" --user
+
+    # The installer writes every command to ~/.local/bin. Steps after this
+    # one find them there before anything the runner image carries.
+    #
+    # ACCEPTED FINDING: zizmor's `github-env` audit flags any write to
+    # GITHUB_PATH whose value it cannot prove is static. This one is the job
+    # user's own ~/.local/bin, from HOME, which neither a caller nor a pull
+    # request sets, and what is in it is what the step above installed after
+    # checking every download against its pin. Suppressed inline, as the
+    # standards' setup action does, because zizmor's config keys an ignore by
+    # file name, and every composite action is named action.yml.
+    - name: '🛣️ Put It On PATH'
+      shell: sh
+      run: | # zizmor: ignore[github-env]
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
