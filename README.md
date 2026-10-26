@@ -197,7 +197,7 @@ their own.
 | `dependabot-automerge.yml` | Approves and queues Dependabot's patch and minor updates                                                     |
 | `ci-failure-alert.yml`     | Opens an issue when a watched workflow fails, closes it on green                                             |
 | `apply-standards.yml`      | Dispatch-only. The label taxonomy, the settings and branch protection                                        |
-| `auto-format.yml`          | Formats what a push touched                                                                                  |
+| `auto-format.yml`          | Formats what a push touched, once a formatter is configured; none is here, so it runs none                   |
 | `preview-deploy.yml`       | Deploys pushes to a preview target, once one is configured                                                   |
 | `verify-stubs.yml`         | Proves every job's permission ceiling matches its called workflow                                            |
 | `auto-index.yml`           | Redraws every folder log and index after a push, as a pull request                                           |

@@ -58,9 +58,10 @@ request is not the first place you hear about them.
 🗂️ Machined Indexes redraws this log after every push to the default branch,
 from each docstring. Who runs them:
 
-- `checks.yml` runs `validate-repository.py` as the `ci` job's `lint-command`,
-  and every `test_*.py` here as its `test-command`. That discovers a test
-  added beside a new script without anyone remembering to list it.
+- `checks.yml` runs `validate-repository.py` through `make lint`, the `ci`
+  job's `lint-command`, and every `test_*.py` here through `make test`, its
+  `test-command`. That discovers a test added beside a new script without
+  anyone remembering to list it.
 - `verify-stubs.yml` installs `requirements.txt` and runs
   `verify-stub-ceilings.py`.
 - `cut-release.yml` runs `validate-repository.py` before it tags a release, so

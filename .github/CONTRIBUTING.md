@@ -46,7 +46,7 @@ We value **small, frequent, and high-quality** contributions that adhere to our 
 
 ### 2. Branching Strategy
 
-- **Target Branch:** Always target **`Development`** for new features. `Release` is the production line and is promoted to, never committed to directly.
+- **Target Branch:** Always target **`Development`**. There is no production branch here: a release is cut from `Development` by dispatching 🏷️ Cut Release, dry run first, as the [README](../README.md#-releasing) says.
 - **Naming Convention:** `<type>/<topic>`, where the prefix says what the work is:
   - `feat/<topic>` for new work
   - `bugfix/<ticket>` for a fix
@@ -59,7 +59,7 @@ We value **small, frequent, and high-quality** contributions that adhere to our 
 
 ### Commit Message Conventions
 
-We strictly enforce **Conventional Commits** (`type(scope): summary`). This is critical because our release pipelines read these messages to automatically generate changelogs and determine semantic version numbers.
+We strictly enforce **Conventional Commits** (`type(scope): summary`). A squash merge makes the pull request's title the commit that lands, and each release's notes are drawn from those titles and their labels; the version itself is the one typed in when 🏷️ Cut Release is dispatched.
 
 - **Format**: `type(scope): 🩹 summary`
 - **Types (the full enforced set)**: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`, `security`.
@@ -67,9 +67,9 @@ We strictly enforce **Conventional Commits** (`type(scope): summary`). This is c
 
 ### Code Quality Checklist
 
-- **Linting**: All code must pass the linter before submission. Run this project's lint command locally - the one configured as `lint-command` in `.github/workflows/checks.yml`.
-- **Testing**: Unit tests are required for all logic updates. Run the `test-command` from the same file to verify.
-- **Documentation**: Update the relevant `docs/` files if your change impacts project behavior or setup instructions.
+- **Linting**: All code must pass the linter before submission. Run `make lint`, the `lint-command` in `.github/workflows/checks.yml`.
+- **Testing**: Unit tests are required for all logic updates. Run `make test`, the `test-command` from the same file: it builds the image, so it needs Docker, and behind a proxy that inspects TLS it needs the proxy's CA bundle, as the [Makefile](../Makefile) says. `make test-unit` runs the tests that need no Docker.
+- **Documentation**: Update the README of each folder you change, and the root README or AGENTS.md where a change affects how the repository is used or released.
 
 ### Test Policy (required)
 
@@ -82,14 +82,14 @@ This is a **mandated policy**, not a preference:
 
 ### Coding Style
 
-- **Formatting**: this project's formatter is the authority, and its lint command must pass. Record which one it is in `docs/technical/` so the choice is written down somewhere rather than inferred.
+- **Formatting**: no formatter is enforced here, and `make lint` must pass. Match the surrounding file and the conventions in [AGENTS.md](../AGENTS.md#conventions); the image holds Prettier, ruff and markdownlint-cli2 at the standards' versions for anyone who wants to run them.
 - **Naming**: follow the prevailing convention of the language you are writing in. Consistency with the surrounding file beats consistency with any other project.
 - **Types**: where the language has a strict mode, use it. Prefer an explicit type at a public boundary over an inferred one.
 - **Logic**: favour pure functions and immutability; use guard clauses rather than deep nesting; raise errors with enough context to act on and handle them at a boundary.
 
 ### Testing Standards
 
-- **Location**: unit tests go in `tests/unit/`, unless your language's convention keeps them beside the source (`foo_test.go`, `foo.test.ts`); integration and end-to-end suites go in `tests/integration/` and `tests/e2e/`. Record which in `docs/technical/testing/Unit-Test-Standards.md`, instantiated from its seed.
+- **Location**: unit tests are `tests/test_*.py` and `.github/scripts/test_*.py`, which `make test-unit` discovers, and the tests that check a built image are in `tests/image/`, which `make test-image` runs. A test in a new folder under `tests/` runs only once that folder has an `__init__.py` or a line of its own in the Makefile.
 - **Mocking**: always mock network/API calls; isolate pure logic from heavy dependencies.
 - **Naming**: name each test for the behaviour it pins down - `<unit> should <behaviour> when <condition>` - in whatever structure your test framework uses, with assertions that say what failed.
 - **Gate**: the test suite must pass before merge; add meaningful tests for every logic change, not assertions that cannot fail.
@@ -111,7 +111,7 @@ This is a **mandated policy**, not a preference:
 - **Sign off your commits (DCO).** By adding a `Signed-off-by` line you certify the [Developer Certificate of Origin](https://developercertificate.org/) - that you wrote the change or have the right to submit it. This is machine-checked: the **✍️ DCO Sign-Off** job fails any PR whose human-authored commits lack the trailer (bot PRs are exempt). Git does it for you:
 
   ```bash
-  git commit -s -m "feat(scope): 🎯 summary"
+  git commit -s -m "feat(scope): 🎯 summary" -m "Why the change was needed."
   ```
 
   This appends `Signed-off-by: Your Name <you@example.com>` using your git identity. Contributions are licensed inbound under the repository's [licence](../LICENSE).
@@ -162,7 +162,7 @@ logic it calls lives in `tannergolden/standards`.
 | **Runner Egress Audit**    | 🤖 Automated | Harden-Runner (first step of every job)                      |
 | **Supply-Chain Score**     | 🤖 Automated | `scorecard.yml` (weekly, public repositories)                |
 | **Pre-Commit Checks**      | 🤖 Automated | `.github/scripts/hooks/` (commit message, sign-off, secrets) |
-| **Code Formatting**        | 🤖 Automated | `auto-format.yml` (opens a PR, never pushes to your branch)  |
+| **Code Formatting**        | 🧑‍💻 Manual    | None configured here, so `auto-format.yml` runs no formatter |
 | **Dependency Updates**     | 🤖 Automated | Dependabot + `dependabot-automerge.yml` (patch & minor only) |
 | **CI Failure Escalation**  | 🤖 Automated | `ci-failure-alert.yml`                                       |
 | **Stub Ceiling Checks**    | 🤖 Automated | `verify-stubs.yml` (daily)                                   |
@@ -170,7 +170,7 @@ logic it calls lives in `tannergolden/standards`.
 | **Merge Gate (green CI)**  | 🤖 Automated | Required status checks, set by those rulesets                |
 | **Priority Assessment**    | 🧑‍💻 Manual    | Human Review                                                 |
 | **Architectural Sign-off** | 🧑‍💻 Manual    | Code Review Approval                                         |
-| **Merging to Production**  | 🧑‍💻 Manual    | Human Promotion                                              |
+| **Cutting a Release**      | 🧑‍💻 Manual    | 🏷️ Cut Release, dispatched from `Development`, dry run first |
 
 ---
 
