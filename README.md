@@ -151,9 +151,10 @@ new Codespace pulls it fresh.
 
 If a job after the tag fails, re-run the failed jobs from the run's page: the
 tag and the release stay, and the image is built and pushed again. Do it
-within a week, while the SBOMs wait for the job that attaches them. If the
-tagging job itself fails after pushing the tag, a re-run refuses the tag that
-now exists, so cut the next patch instead.
+within a week, while the SBOMs wait for the job that attaches them, and
+before dispatching Cut Release again: 🧹 Prune Run History keeps only the
+newest run of it. If the tagging job itself fails after pushing the tag, a
+re-run refuses the tag that now exists, so cut the next patch instead.
 
 A release changes what every repository naming `:1` gets the next time a
 machine pulls it, so treat one as a production change to all of them at once.
