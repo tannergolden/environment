@@ -149,7 +149,7 @@ Ask me which of this repository's community health files to remove, and wait for
 
 **Find a prompt.** Each runs as it is, except those marked ✏️, which ask for your details.
 
-- **Building the image:** [Write The Dockerfile](#write-the-dockerfile), [Add The Image's Tests](#add-the-images-tests), [Give This Repository's Dev Container Docker](#give-this-repositorys-dev-container-docker)
+- **Building the image:** [Write The Dockerfile](#write-the-dockerfile), [Add The Image's Tests](#add-the-images-tests), [Give The Dev Container Docker](#give-the-dev-container-docker)
 - **Tools:** [Add A Tool To The Image](#add-a-tool-to-the-image) ✏️, [Remove A Tool From The Image](#remove-a-tool-from-the-image) ✏️, [Move A Tool To A New Version](#move-a-tool-to-a-new-version) ✏️, [Check The Image Against The Standards' Pins](#check-the-image-against-the-standards-pins)
 - **Using it:** [Find Why A Check Differs In The Image](#find-why-a-check-differs-in-the-image) ✏️, [Check A Published Image Holds What It Promises](#check-a-published-image-holds-what-it-promises) ✏️, [Plan Moving A Repository Onto The Image](#plan-moving-a-repository-onto-the-image) ✏️, [Match A Cloud Session To The Image](#match-a-cloud-session-to-the-image)
 
@@ -210,7 +210,7 @@ Write tests that run the built image and check each tool's version against the v
 </done_when>
 ```
 
-### Give This Repository's Dev Container Docker
+### Give The Dev Container Docker
 
 **Use when** you want to build and test the image from inside this repository's own dev container or Codespace, as the README's Getting It Built list asks.
 
