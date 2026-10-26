@@ -49,9 +49,10 @@ the folder holds.
 
 <!-- AUTO-INDEX:BEGIN dir=. style=log -->
 
-| Entry                    | Purpose    |
-| :----------------------- | :--------- |
-| [`README.md`](README.md) | This file. |
+| Entry                                                | Purpose                                                                                                                                                                                                                          |
+| :--------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`README.md`](README.md)                             | This file.                                                                                                                                                                                                                       |
+| [`Release-Verification.md`](Release-Verification.md) | How to check that an image of the environment was built by this repository from its source, from the provenance attestation on its digest, how to pin that digest, and how to read the SBOM of each architecture on its release. |
 
 <!-- AUTO-INDEX:END -->
 

@@ -88,8 +88,9 @@ like to be credited when you report.
 - The fix is developed in a private **GitHub security advisory**, with you
   invited to it if you wish.
 - When it ships, the advisory is published, and a **CVE** is requested through
-  GitHub where the vulnerability warrants one, so dependency tools such as
-  Dependabot can tell everyone affected.
+  GitHub where the vulnerability warrants one. No dependency tool tracks a
+  container image, so the advisory and the release notes are how the image's
+  users hear of a fix.
 - The release notes list it under **🔒 Security**, and they are kept: release
   pages are this repository's changelog and are never deleted on their own.
 
@@ -97,21 +98,27 @@ like to be credited when you report.
 
 ## ✅ Supported Versions
 
-| Version              | Security fixes                                  |
-| :------------------- | :---------------------------------------------- |
-| **Latest release**   | ✅ Yes                                          |
-| **Earlier releases** | ❌ No: upgrade to the latest release to get one |
+| Version                                              | Security fixes                            |
+| :--------------------------------------------------- | :---------------------------------------- |
+| **Latest release**: git `v1`, image `1` and `latest` | ✅ Yes                                    |
+| **Earlier releases**                                 | ❌ No: take the latest release to get one |
 
-A release stops receiving security fixes the day the next one is published. If
-this project supports more than the latest release, list each supported line
-here, with the date its support ends.
+A release stops receiving security fixes the day the next one is published. A
+fix ships as the next patch release, and reaches each kind of user in its own
+way: a development container naming `:1` gets it the next time its machine
+pulls the image (`docker pull`, or a rebuild without cache); one pinned to a
+version or a digest gets it when that pin is moved; and a Claude Code cloud
+environment gets it when its setup script is printed again with
+`make cloud-setup` and pasted in place of the old one.
 
 ---
 
 ## 🧭 Scope
 
 **In scope:** the code and configuration in this repository, its workflows, and
-the artifacts its releases publish.
+the artifacts its releases publish: the image, including a known vulnerability
+in any tool or package it ships, which this repository fixes by moving that
+pin and releasing.
 
 **Out of scope:**
 
@@ -147,15 +154,17 @@ Each of these is configured by the files in this repository or by
 - **Dependency review**: every pull request is screened for dependencies with
   known vulnerabilities (public repositories).
 - **Dependency updates**: Dependabot keeps the workflow actions, the development
-  container and the repository scripts' requirements current, waits three days
-  before proposing a new version, and opens security updates at once.
+  container, the repository scripts' requirements and the Dockerfile's base
+  image current, waits three days before proposing a new version, and opens
+  security updates at once. The toolchain's own pins move by hand, in step with
+  the standards, as [`toolchain/README.md`](../toolchain/README.md) says.
 - **Supply-chain score**: OpenSSF Scorecard rates the repository weekly and
   files its findings under code scanning (public repositories).
 - **Hardened runners**: every job starts by auditing its network egress.
-- **Release integrity**: every release carries a CycloneDX SBOM, and on a
-  public repository its build archive also carries a build provenance
-  attestation. How to check them is in the project's Release Verification
-  document, seeded from `docs/templates/distribution/Release-Verification.md`.
+- **Release integrity**: every release publishes the image with a build
+  provenance attestation on its digest, and carries a CycloneDX SBOM of each
+  architecture. How to check both is in
+  [Release Verification](../docs/distribution/Release-Verification.md).
 
 ---
 
