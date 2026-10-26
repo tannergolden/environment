@@ -9,10 +9,11 @@
 # CodeQL's sweep, the full-history secret scan, and a config re-validation,
 # so a dormant repository still gets told when a rule it relies on breaks.
 #
-# Every job here runs in the golden path template too. What it ships - the
-# scripts, the workflows, the seeded documents - is what every generated
-# repository's required checks run against, so it is checked before it ships
-# rather than in the first repository that syncs it.
+# Every job here but `toolchain`, which is this repository's own, runs in the
+# golden path template too. What it ships - the scripts, the workflows, the
+# seeded documents - is what every generated repository's required checks run
+# against, so it is checked before it ships rather than in the first
+# repository that syncs it.
 #
 # ⚠️ THE JOB IDS ARE THE CHECK NAMES. A called workflow reports as
 # `<job id> / <job name>`, so `ci` and `secrets` below are load-bearing:
@@ -129,10 +130,10 @@ jobs:
 
   toolchain:
     # Proves this repository's toolchain action on a real runner, as the
-    # standards' checks will call it: every tool installed, each at the
-    # version it is pinned at, and the lint run with the pinned shellcheck.
-    # The image's own tests run in the ci job; here only the ones about the
-    # tools do, against the runner's PATH.
+    # standards' checks will call it: every tool installed and first on PATH
+    # at its pinned version, the runner's own Python and Node.js new enough
+    # for them, and the lint run with the pinned shellcheck. The image's own
+    # tests run in the ci job; here only the ones about the tools do.
     if: ${{ github.event_name != 'push' || github.ref_name == github.event.repository.default_branch }}
     name: '🧰 Toolchain Action'
     runs-on: ubuntu-latest

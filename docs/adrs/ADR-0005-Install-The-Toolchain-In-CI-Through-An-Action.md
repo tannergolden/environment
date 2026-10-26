@@ -52,7 +52,8 @@ what every repository's CI runs.
 - **Driver 2**: One copy of each version, held by the tests that check the
   image.
 - **Driver 3**: Nothing new in the path of every repository's CI that can fail
-  on its own, and nothing that changes a repository's own tests.
+  on its own, above all in the required secret scan, and nothing that changes
+  a repository's own tests.
 
 ---
 
@@ -77,18 +78,29 @@ what every repository's CI runs.
 The action runs the installer the image runs, from the same release
 ([ADR-0002](ADR-0002-One-Installer-For-The-Image-And-Cloud-Sessions.md)), so
 CI gets the image's versions (Driver 1). One `uses:` line in each of the
-standards' check jobs replaces that tool's own install, and the standards keep
-no version of their own, so this repository owns them (Driver 2). It downloads
-from the upstream sources the standards already downloaded from, checks each
-file against its pin, needs neither GHCR nor the image, and took about 12
-seconds when tried here (Driver 3). It runs only in the jobs that run the
-standards' checks: its Python packages go into the user site, ahead of
-site-packages, so in front of a repository's own tests they would shadow its
-pytest or PyYAML (Driver 3).
+standards' check jobs replaces that tool's own install, and the standards'
+workflows keep no version of a tool the action installs, so this repository
+owns them (Driver 2). Each job names the part it runs, so it downloads only
+that, from the hosts that serve it: the secret scan fetches gitleaks from
+GitHub's releases, as gitleaks-action did, and nothing from PyPI or npm.
+actionlint now comes from its GitHub release rather than the Go module proxy.
+Every file is checked against its pin, nothing needs GHCR or the image, and
+installing every part took about 12 seconds when tried here (Driver 3). It
+runs only in the jobs that run the standards' checks: its Python packages go
+into the user site, ahead of site-packages, so in front of a repository's own
+tests they would shadow its pytest or PyYAML (Driver 3).
 
 The standards call it at the moving major, as they call their own actions and
 the intelligence hub's: moving `v1` is how a release here reaches every
-repository's checks.
+repository's checks. That means a repository that pins the standards at a
+version or a commit still runs this repository's `v1`, which moves: an exact
+pin of the standards does not pin their check tools. Calling it at a commit
+instead would hold them still, and make every version here wait on a
+standards release to reach any check; the moving major keeps a version in one
+place.
+
+This supersedes one part of ADR-0002: its pins no longer mirror the
+standards'. This repository owns them, and the standards' checks follow.
 
 ---
 
@@ -107,9 +119,9 @@ repository's checks.
 ### Option A: Inside the image
 
 - ✅ Exactly one machine, everywhere.
-- ❌ Every job pulls an 848 MB image from GHCR, the image has no `gh`, which
-  several of the standards' jobs use, and a job that builds an image cannot run
-  inside one.
+- ❌ Every job pulls the image from GHCR, about 200 MB to download and 850 MB
+  unpacked, the image has no `gh`, which several of the standards' jobs use,
+  and a job that builds an image cannot run inside one.
 
 ### Option B: The toolchain action
 
@@ -131,7 +143,8 @@ repository's checks.
 - [`toolchain/README.md`](../../toolchain/README.md): moving a version, now
   only here
 - [ADR-0002](ADR-0002-One-Installer-For-The-Image-And-Cloud-Sessions.md): the
-  installer the action runs
+  installer the action runs, and the pins this record takes over from the
+  standards
 - [ADR-0003](ADR-0003-Release-The-Image-From-Cut-Release.md): the release that
   moves `v1`
 

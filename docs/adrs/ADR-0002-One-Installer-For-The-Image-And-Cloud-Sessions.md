@@ -33,6 +33,12 @@ _Checked before it is installed, everywhere it is installed._
 
 ## 🎯 Context & Problem Statement
 
+> [!NOTE]
+> **Amended by [ADR-0005](ADR-0005-Install-The-Toolchain-In-CI-Through-An-Action.md).**
+> The one installer stands. Its pins no longer mirror the standards': this
+> repository owns them, and the standards' checks install them through the
+> toolchain action, which runs this installer in CI.
+
 The environment exists so that a check means the same thing on every machine:
 a development container, a Codespace, and a Claude Code cloud session. Before
 it, each repository's container floated on a moving base tag with its tools

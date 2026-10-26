@@ -158,7 +158,10 @@ Each of these is configured by the files in this repository or by
   image current, waits three days before proposing a new version, and opens
   security updates at once. The toolchain's own pins move by hand, here, and
   reach the standards' checks through the toolchain action, as
-  [`toolchain/README.md`](../toolchain/README.md) says.
+  [`toolchain/README.md`](../toolchain/README.md) says. A fix to one reaches
+  every repository's checks once 🏷️ Cut Release moves `v1`, the next time
+  each runs, and a development container the next time its machine pulls
+  `1`.
 - **Supply-chain score**: OpenSSF Scorecard rates the repository weekly and
   files its findings under code scanning (public repositories).
 - **Hardened runners**: every job starts by auditing its network egress.

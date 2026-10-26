@@ -166,7 +166,7 @@ The image holds exactly the tools the standards' checks run, for linux/amd64 and
 </context>
 
 <task>
-Pin the tool in toolchain/ at the version the standards pin, install it with the others, and add it to the image's tests, the README's What It Holds and toolchain/README.md.
+Pin the tool in toolchain/ at its newest release, or the version I name, install it with the others, and add it to the image's tests, the README's What It Holds and toolchain/README.md.
 </task>
 
 <constraints>
@@ -210,7 +210,7 @@ Find everything that still uses the tool. If nothing does, take its pin out of t
 
 ### Move A Tool To A New Version
 
-**Use when** a tool the image holds has a release you want. **Fill in** `{{TOOL}}`, the tool; and `{{VERSION}}`, the version to move to, or `the standards' pin`.
+**Use when** a tool the image holds has a release you want. **Fill in** `{{TOOL}}`, the tool; and `{{VERSION}}`, the version to move to, or `its newest release`.
 
 ```text
 <context>
@@ -315,11 +315,11 @@ A verdict first. Then each platform with its digest and every tool's version aga
 
 ```text
 <context>
-A repository points at the image by tag in its .devcontainer/devcontainer.json, as the README's How A Repository Uses It shows, and its CI can run its checks inside the image. tannergolden/path ships the dev container every generated repository keeps current, and the standards' Environment & Technologies document says which tools come from the image and which a repository keeps. The repository: {{REPOSITORY}}.
+A repository points at the image by tag in its .devcontainer/devcontainer.json, as the README's How A Repository Uses It shows. Its CI already runs the image's check tools through the standards' checks, which install them with the toolchain action, so CI does not move. tannergolden/path ships the dev container every generated repository keeps current through 🔄 Template Sync, and stays as it is: a repository that moves switches off the two .devcontainer lines in its .github/template-sync, so a sync never merges the template's container back. The standards' Environment & Technologies document says which tools come from the image and which a repository keeps. The repository: {{REPOSITORY}}.
 </context>
 
 <task>
-Plan the move: what the repository's dev container, CI jobs and documents would change, and what in tannergolden/path and tannergolden/standards has to change first, or with it.
+Plan the move: what the repository's dev container, its .github/template-sync and its documents would change, and anything in tannergolden/standards that has to change with it.
 </task>
 
 <constraints>

@@ -1,8 +1,8 @@
 # --- 🐳 The Environment ---
 #
-# The machine every repository is worked on in: Ubuntu 24.04 pinned by
-# digest, git, Python 3.12, Node.js 22, and the tools the standards' checks
-# run, each at the exact version toolchain/ pins. 🏷️ Cut Release publishes it
+# The account's development machine: Ubuntu 24.04 pinned by digest, git,
+# Python 3.12, Node.js 22, and the tools the standards' checks run, each at
+# the exact version toolchain/ pins. 🏷️ Cut Release publishes it
 # as ghcr.io/tannergolden/environment, for linux/amd64 and linux/arm64.
 #
 # A repository's development container names it, and nothing else:

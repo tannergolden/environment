@@ -82,7 +82,7 @@ This is a **mandated policy**, not a preference:
 
 ### Coding Style
 
-- **Formatting**: no formatter is enforced here, and `make lint` must pass. Match the surrounding file and the conventions in [AGENTS.md](../AGENTS.md#conventions); the image holds Prettier, ruff and markdownlint-cli2 at the standards' versions for anyone who wants to run them.
+- **Formatting**: no formatter is enforced here, and `make lint` must pass. Match the surrounding file and the conventions in [AGENTS.md](../AGENTS.md#conventions); the image holds Prettier, ruff and markdownlint-cli2, at the versions the standards' checks run, for anyone who wants to run them.
 - **Naming**: follow the prevailing convention of the language you are writing in. Consistency with the surrounding file beats consistency with any other project.
 - **Types**: where the language has a strict mode, use it. Prefer an explicit type at a public boundary over an inferred one.
 - **Logic**: favour pure functions and immutability; use guard clauses rather than deep nesting; raise errors with enough context to act on and handle them at a boundary.

@@ -1,6 +1,6 @@
 <!--
 title: '🐳 GOLDEN IMAGE'
-description: 'The development environment every repository on the account shares: one pinned, versioned container image holding the toolchain the standards'' checks run on, published once and pulled by tag. Read it before you add a tool or change a version.'
+description: 'The account''s development environment: one pinned, versioned container image holding the tools the standards'' checks run, published once and pulled by tag, and the installer and action that put the same tools in a cloud session and in CI. Read it before you add a tool or change a version.'
 type: index
 -->
 
@@ -10,7 +10,7 @@ type: index
 
 <a name="top"></a>
 
-**One pinned machine for every repository, so a check means the same thing everywhere.**
+**One pinned toolchain behind every repository's checks, so a check means the same thing everywhere.**
 
 _Defined once. Pulled everywhere._
 
@@ -20,41 +20,47 @@ _Defined once. Pulled everywhere._
 
 ## 💡 What This Is
 
-The repository that defines the machine every repository is worked on in:
-Ubuntu 24.04, git, Python 3.12, Node.js 22, and the tools the
+The repository that defines the account's development machine: Ubuntu
+24.04, git, Python 3.12, Node.js 22, and the tools the
 [standards](https://github.com/tannergolden/standards)' checks run, each at an
 exact version. It publishes them as one container image,
-`ghcr.io/tannergolden/environment`, and a repository points at the image by
-tag instead of carrying its own copy, the way it already calls
-`tannergolden/standards@v1` instead of copying workflows.
+`ghcr.io/tannergolden/environment`, which a repository names by tag instead
+of carrying a container of its own, the way it already calls
+`tannergolden/standards@v1` instead of copying workflows. The same installer
+puts the same tools in a Claude Code cloud session, and, through the
+standards' checks, in every repository's CI.
 
-A development container on a Mac, a Codespace and a Claude Code cloud session
-then run the same check tools at the same versions. A check that passes or
-fails does so because of the code, not because two machines had different
-tools.
+A development container on a Mac, a Codespace, a Claude Code cloud session
+and CI then run the same check tools at the same versions. A check that
+passes or fails does so because of the code, not because two machines had
+different tools.
 
 > [!IMPORTANT]
-> **Status: built, waiting on its first release.** The image, its tests, the
-> release workflow and the cloud setup script are all here. The image and the
-> scripts are tested; the release has not run yet, and nothing is published
-> until 🏷️ Cut Release cuts `v1.0.0`: see [Releasing](#-releasing).
+> **Status: v1.** `v1.0.0` is the first release, cut by 🏷️ Cut Release: the
+> image, the cloud setup script and the toolchain action ship in it.
+> [After The First Release](#-after-the-first-release) lists what the release
+> cannot do on its own.
 
 ---
 
 ## 🎯 What It Fixes
 
-- **The development container is copied into every repository, not called.**
-  Each one generated from the templates carries the same `devcontainer.json`,
-  on the moving `mcr.microsoft.com/devcontainers/base:ubuntu` tag, which now
-  follows Ubuntu 26.04 while CI runs 24.04. Its features are resolved when it
-  is built, and its gitleaks is Ubuntu's 8.16.0, where CI scans with 8.24.3.
-  None of the other check tools is in it.
-- **Versions are pinned by hand, in several places.** The standards keep ruff
+- **The development container is copied, not called.** Each repository
+  generated from the templates carries the same `devcontainer.json`, on the
+  moving `mcr.microsoft.com/devcontainers/base:ubuntu` tag, which now follows
+  Ubuntu 26.04 while CI runs 24.04. Its features are resolved when it is
+  built, and its gitleaks is Ubuntu's 8.16.0, where CI scans with 8.24.3.
+  None of the other check tools is in it. The repositories other repositories
+  call name this image instead, and any other can, as
+  [How A Repository Uses It](#-how-a-repository-uses-it) shows.
+- **Versions were pinned by hand, in several places.** The standards kept ruff
   and pytest in three files, and actionlint and zizmor in two workflows each,
-  while `.github` runs markdownlint-cli2 with no version at all.
+  and `.github` runs markdownlint-cli2 with no version at all. The standards'
+  checks now take every version from here.
 - **A cloud session brings its own.** A Claude Code cloud session on this
-  account carried ruff 0.16.9 in October 2026, where the standards pin 0.15.8,
-  and none of actionlint, zizmor, shellcheck, gitleaks, typos or lychee.
+  account carried ruff 0.16.9 in October 2026, where the standards' checks
+  ran 0.15.8, and none of actionlint, zizmor, shellcheck, gitleaks, typos or
+  lychee.
 - **A fix means editing every copy.** One change here reaches them all.
 
 ---
@@ -65,7 +71,7 @@ tools.
 | :------------------------------------------------------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | The image                                                           | Ubuntu 24.04 pinned by digest; git, curl, make and Python 3.12 with pip, from Ubuntu's archive; Node.js 22; and actionlint, gitleaks, lychee, shellcheck, typos, ruff, pytest, zizmor, PyYAML, Prettier and markdownlint-cli2, each at the version `toolchain/` pins. A `vscode` user with sudo |
 | [`Dockerfile`](Dockerfile)                                          | The image's definition, at the root, where the release's publish job looks for it                                                                                                                                                                                                               |
-| [`toolchain/`](toolchain/README.md)                                 | Every tool's pin, and the installer the image and a cloud session both run                                                                                                                                                                                                                      |
+| [`toolchain/`](toolchain/README.md)                                 | Every tool's pin, and the installer the image, a cloud session and the toolchain action run                                                                                                                                                                                                     |
 | [`.github/actions/toolchain/`](.github/actions/toolchain/README.md) | The action that runs that installer in a GitHub Actions job, which is how the standards' checks get their tools                                                                                                                                                                                 |
 | [`setup/`](setup/README.md)                                         | The Claude Code cloud setup script, printed pinned to a release                                                                                                                                                                                                                                 |
 | [`tests/`](tests/README.md)                                         | Checks that the pins agree, that the installer refuses what it should, and that a built image holds each tool at its pinned version                                                                                                                                                             |
@@ -101,7 +107,9 @@ needs beyond it.
 - **The repositories other repositories call**: the standards and the
   intelligence hub name the image in their own development containers. The
   templates keep a container of their own, so a repository generated from them
-  names the image only when it chooses to, with this file.
+  names the image only when it chooses to, with this file, and switches off
+  the two `.devcontainer` lines in its `.github/template-sync`, so
+  🔄 Template Sync never merges the template's container back.
 - **A Codespace**: it starts from the same file. Your dotfiles' `install.sh`
   runs in it with the `curl` and `python3` the image carries, and installs the
   agent rules from the intelligence hub once the dotfiles pin a hub release.
@@ -110,10 +118,11 @@ needs beyond it.
   tools at the same versions for the session's user. The session keeps its own
   Python, and its own Node.js when that is 22 or newer.
 - **CI**: the standards' checks install their tools with this repository's
-  [toolchain action](.github/actions/toolchain/README.md), at `@v1`, so every
-  repository that calls them runs the image's tools with nothing of its own to
-  change. That reaches a repository with the first standards release that
-  carries it. A repository's own lint and test commands keep the runner's tools.
+  [toolchain action](.github/actions/toolchain/README.md), at `@v1`, each job
+  only the ones it runs, so every repository that calls them runs the image's
+  tools with nothing of its own to change. That reaches a repository with the
+  first standards release that carries it. A repository's own lint and test
+  commands keep the runner's tools.
 
 A machine pulls `:1` the first time it needs it and keeps that image through
 rebuilds until it pulls again: a new release reaches it after
@@ -174,8 +183,9 @@ What this repository cannot do on its own:
       take their tools from the toolchain action, and every repository's
       checks with them. Until then they run the standards' own pins, which
       match the first release's.
-- [ ] Paste the cloud setup script, printed by `make cloud-setup`, into the
-      cloud environment's settings, above the intelligence hub's.
+- [ ] Paste the cloud setup script, printed by
+      `make cloud-setup VERSION=v1.0.0`, into the cloud environment's
+      settings, above the intelligence hub's.
 
 The templates keep a development container of their own on purpose: only the
 repositories other repositories call, the standards and the intelligence hub,
@@ -246,8 +256,8 @@ their own, as does the `toolchain` job in 🚦 Checks.
 | [`assets/`](assets/README.md)               | Where this project keeps what presents it: four folders to start, a name ready for every other kind, and the rules every file follows.                                                              |
 | [`docs/`](docs/README.md)                   | Where this project keeps its own documents, and where the engineering standards it follows actually live.                                                                                           |
 | [`setup/`](setup/README.md)                 | The setup script that installs the toolchain into every Claude Code cloud session, pinned to one release, checked file by file, and never failing a session's setup.                                |
-| [`tests/`](tests/README.md)                 | The tests that hold the toolchain to its pins: the unit tests that need nothing but Python, and the image tests that check a built image.                                                           |
-| [`toolchain/`](toolchain/README.md)         | Every tool the image and a cloud session install, the exact version and checksum of each, the installer both run, and how to move a version.                                                        |
+| [`tests/`](tests/README.md)                 | The tests that hold the toolchain to its pins: the unit tests that need only Python and git, and the image tests that check a built image.                                                          |
+| [`toolchain/`](toolchain/README.md)         | Every tool the image, a cloud session and the toolchain action install, the exact version and checksum of each, the installer all three run, and how to move a version.                             |
 | [`.dockerignore`](.dockerignore)            | Docker sends a build only what the Dockerfile reads: the toolchain it installs.                                                                                                                     |
 | [`.editorconfig`](.editorconfig)            | The editor settings every file shares: UTF-8, LF line endings, a final newline, two-space indents, and each language's own formatter defaults.                                                      |
 | [`.env.example`](.env.example)              | Environment variable template for this project.                                                                                                                                                     |
@@ -255,7 +265,7 @@ their own, as does the `toolchain` job in 🚦 Checks.
 | [`.gitignore`](.gitignore)                  | &#x1F5C4;&#xFE0F; Universal Ignore Patterns                                                                                                                                                         |
 | [`.markdownlint.json`](.markdownlint.json)  | Repository-wide markdownlint rules. Discovered by mechanism, which is why this lives at the root.                                                                                                   |
 | [`AGENTS.md`](AGENTS.md)                    | How AI coding agents work in environment: the universal rules first, then this repository's own.                                                                                                    |
-| [`Dockerfile`](Dockerfile)                  | The machine every repository is worked on in: Ubuntu 24.04 pinned by digest, git, Python 3.12, Node.js 22, and the tools the standards' checks run, each at the exact version toolchain/ pins.      |
+| [`Dockerfile`](Dockerfile)                  | The account's development machine: Ubuntu 24.04 pinned by digest, git, Python 3.12, Node.js 22, and the tools the standards' checks run, each at the exact version toolchain/ pins.                 |
 | [`LICENSE`](LICENSE)                        | MIT License                                                                                                                                                                                         |
 | [`Makefile`](Makefile)                      | The commands CI runs, so a contributor runs the same ones: &#x1F6A6; Checks calls `make lint` and `make test`, and &#x1F3F7;&#xFE0F; Cut Release calls them again on the commit it is about to tag. |
 | [`README.md`](README.md)                    | This file.                                                                                                                                                                                          |

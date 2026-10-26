@@ -1,6 +1,6 @@
 <!--
 title: '🧪 TESTS'
-description: 'The tests that hold the toolchain to its pins: the unit tests that need nothing but Python, and the image tests that check a built image.'
+description: 'The tests that hold the toolchain to its pins: the unit tests that need only Python and git, and the image tests that check a built image.'
 type: index
 -->
 
@@ -24,7 +24,7 @@ Two kinds of test, run two ways:
 
 | Kind                        | Needs            | Run by                              | Proves                                                                                       |
 | :-------------------------- | :--------------- | :---------------------------------- | :------------------------------------------------------------------------------------------- |
-| `test_*.py`, here           | Python           | `make test-unit`                    | The pins are complete and agree, the installer refuses what it should                        |
+| `test_*.py`, here           | Python, git      | `make test-unit`                    | The pins are complete and agree, the installer refuses what it should                        |
 | [`image/`](image/README.md) | Docker, an image | `make test-image`, which builds one | The image holds every tool at its pinned version, and the validator and actionlint run in it |
 
 The image tests can also check the tools on a machine's `PATH`: 🚦 Checks'

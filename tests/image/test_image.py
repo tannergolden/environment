@@ -16,10 +16,11 @@ nothing here depends on what is reachable.
     make test-image
 
 ENVIRONMENT_IMAGE=host checks the tools on this machine's PATH instead, as
-the toolchain action's job in checks.yml does after installing them. Only the
-tests about the tools run then: the image's user, label and Python are not
-the machine's. A machine keeps its own Node.js at the pinned major or newer,
-so there Node.js only has to be that new.
+the toolchain action's job in checks.yml does after installing them. The
+tests about the image itself skip then: its pip, git, user, label and the
+checks run inside it. A machine keeps its own Python and Node.js, so there
+they only have to be new enough: Python 3.12 or newer, and Node.js at the
+pinned major or newer.
 
     ENVIRONMENT_IMAGE=host python3 -m unittest discover -s tests/image -p 'test_*.py'
 """

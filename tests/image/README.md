@@ -41,8 +41,10 @@ run inside the image. Every container runs with no network. Without
 as 🚦 Checks' `toolchain` job does after the
 [toolchain action](../../.github/actions/toolchain/README.md) installs them.
 Only the tests about the tools run then, and the ones about the image itself
-skip. A machine keeps its own Node.js at the pinned major or newer, so there
-Node.js only has to be that new.
+skip. A machine keeps its own Python and Node.js, so there they only have to
+be new enough: Python 3.12 or newer, and Node.js at the pinned major or newer.
+🏷️ Cut Release runs them the same way on an amd64 runner and an arm64 one
+before it tags.
 
 ---
 

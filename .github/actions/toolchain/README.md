@@ -20,14 +20,27 @@ _One `uses:` line. The same tools as the image._
 
 ## 💡 What This Folder Is For
 
-[`action.yml`](action.yml) runs [`toolchain/install.sh`](../../../toolchain/README.md)
+[`action.yml`](action.yml) runs [`toolchain/install.sh`](../../../toolchain/install.sh)
 for the job's user, then puts `~/.local/bin` on `PATH`, so every step after it
 runs each check tool at the version the image holds. It is how the standards'
 checks get their tools, and through them every repository's CI:
 
 ```yaml
 - uses: tannergolden/environment/.github/actions/toolchain@v1
+  with:
+    tools: binaries
 ```
+
+`tools` names what the job runs, so it fetches nothing else, and is `all`
+when left out:
+
+| Part       | What it installs                                                          | From                |
+| :--------- | :------------------------------------------------------------------------ | :------------------ |
+| `binaries` | actionlint, gitleaks, lychee, shellcheck, typos                           | GitHub's releases   |
+| `python`   | pytest, ruff, zizmor and PyYAML                                           | PyPI                |
+| `node`     | markdownlint-cli2 and Prettier, and Node.js 22 when the runner's is older | npm, and nodejs.org |
+
+List more than one with commas, such as `binaries,python`.
 
 - **The installer comes with it.** GitHub fetches the action from this
   repository's source archive at the tag the caller names, and `toolchain/`
@@ -39,10 +52,17 @@ checks get their tools, and through them every repository's CI:
 - **It belongs in a job that runs checks.** Its Python packages go into the
   user site of the `python3` on `PATH`, which comes ahead of site-packages, so
   in front of a repository's own tests it would shadow their pytest or PyYAML.
+- **It needs a Linux runner**, amd64 or arm64, with curl, tar and xz, and
+  Python 3.12 or newer with pip for the Python tools, as GitHub's Ubuntu
+  runners have. A self-hosted runner without them fails the job, with the
+  installer saying what is missing.
 
 `@v1` moves with each release, as the image's `1` tag does: a release reaches
-every job that calls it the next time that job runs. 🚦 Checks proves it on a
-runner after every change here, in its `toolchain` job.
+every job that calls it the next time that job runs, whatever the caller pins
+the standards at. A job that must not move calls it at a release's full
+commit SHA instead. 🚦 Checks proves it on a runner after every change here,
+in its `toolchain` job, and 🏷️ Cut Release proves it on both architectures
+before it tags.
 
 ---
 

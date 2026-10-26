@@ -129,8 +129,8 @@ updates:
   # Keeps the Dockerfile's base, ubuntu:24.04, on its newest digest, so a
   # release takes Ubuntu's security fixes. Only the digest moves: another
   # Ubuntu release is a decision, so its tag is never proposed. The tools the
-  # image installs are pinned in toolchain/ and move by hand, with the
-  # standards' pins: toolchain/README.md says how.
+  # image installs are pinned in toolchain/ and move by hand, here, where the
+  # standards' checks take them from: toolchain/README.md says how.
   - package-ecosystem: 'docker'
     directory: '/'
     schedule:
@@ -157,10 +157,11 @@ updates:
           - '*'
 
   # The toolchain's own pins, for security updates only. Their versions move
-  # by hand, in step with the standards, so `open-pull-requests-limit: 0`
-  # turns version updates off; a security update still arrives at once, as a
-  # Conventional Commit with this repository's labels. The tests then hold
-  # its lock to the pins in toolchain/: move the pin, and run `make lock`.
+  # by hand, since every repository's checks follow them, so
+  # `open-pull-requests-limit: 0` turns version updates off; a security
+  # update still arrives at once, as a Conventional Commit with this
+  # repository's labels. The tests then hold its lock to the pins in
+  # toolchain/: move the pin, and run `make lock`.
   - package-ecosystem: 'pip'
     directory: '/toolchain'
     schedule:

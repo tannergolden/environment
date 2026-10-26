@@ -127,10 +127,10 @@ _The universal rules first, then this repository's own._
 
 ## Ask first
 
-- Cutting a release: moving `1` changes the image every repository's development container gets the next time a
-  machine pulls it, and moving `v1` changes the tools every repository's checks run.
+- Cutting a release: moving `1` changes the image every development container that names it gets the next time a
+  machine pulls it, and moving `v1` changes the tools the standards' checks install in every repository.
 - Moving a version: once released, every repository's checks run it.
-- Adding a tool to the image, which every repository's container then carries.
+- Adding a tool to the image, which every container that names the image then carries.
 
 ## Overrides
 

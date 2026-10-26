@@ -1,5 +1,5 @@
-# The Python tools the image and the cloud setup install, at the versions
-# the standards pin, and the PyYAML the repository's scripts pin.
+# The Python tools the image, a cloud session and the toolchain action
+# install, and the PyYAML the repository's scripts pin.
 # toolchain/requirements.txt is compiled from this file: see
 # toolchain/README.md before changing a line.
 PyYAML==6.0.3
