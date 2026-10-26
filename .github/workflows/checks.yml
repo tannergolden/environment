@@ -79,23 +79,11 @@ jobs:
     # resolves to nothing, rather than reporting a green check that checked
     # nothing - so one real command is always enough.
     #
-    # Until you have a linter, `lint-command` validates the repository's OWN
-    # configuration: every YAML and JSON file parses, every workflow `uses:`
-    # is pinned to a tag or a commit, no stray whitespace or CRLF. That is a
-    # real check on files that exist from day one, which is why this gate is
-    # honestly green before you have written any code.
-    #
-    # `test-command` runs the tests of the scripts under .github/scripts/,
-    # the only gates a fresh repository has, so they are the code here that
-    # must not regress silently. Discovery rather than a list: a `test_*.py`
-    # added next to a new script is picked up without anyone naming it.
-    #
-    # Replace them when your project has its own, and add the third as it
-    # becomes true:
-    #
-    #   lint-command: 'golangci-lint run'
-    #   test-command: 'go test ./...'
-    #   build-command: 'go build ./...'
+    # Here both are the Makefile's. `make lint` runs the repository validator
+    # and shellcheck on the installer and the cloud setup script; `make test`
+    # runs the unit tests, then builds the image for linux/amd64 and checks
+    # every tool in it. ci.yml also runs `make build` on its own, since the
+    # Makefile has that target, and the build cache makes it the same image.
     #
     # ⚠️ YOUR SETTINGS GO BELOW, EACH ON A LINE OF ITS OWN, AND NO NOTES
     # BETWEEN THEM. 🔄 Template Sync merges the template's changes to this

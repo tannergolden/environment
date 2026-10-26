@@ -1,7 +1,7 @@
 # --- 🐳 The Environment ---
 #
-# The machine every repository's checks run on: Ubuntu 24.04 pinned by
-# digest, git, Python 3.12, Node.js 22, and every tool the standards' checks
+# The machine every repository is worked on in: Ubuntu 24.04 pinned by
+# digest, git, Python 3.12, Node.js 22, and the tools the standards' checks
 # run, each at the exact version toolchain/ pins. 🏷️ Cut Release publishes it
 # as ghcr.io/tannergolden/environment, for linux/amd64 and linux/arm64.
 #
@@ -10,10 +10,10 @@
 #     { "image": "ghcr.io/tannergolden/environment:1" }
 #
 # WHAT IS EXACT AND WHAT IS NOT. The base is pinned by digest, and every tool
-# the checks run by version and checksum, in toolchain/. The packages from
-# Ubuntu's archive below are its current ones when the image is built, so a
-# rebuild takes Ubuntu's security fixes. A published image never changes, and
-# the tests hold the versions that matter: Python 3.12, git 2.40 or newer.
+# the checks run by version and checksum, in toolchain/. The packages added
+# from Ubuntu's archive below are its current ones when the image is built,
+# and the base's own move with its digest, which Dependabot proposes. The
+# tests hold the versions that matter there: Python 3.12, git 2.40 or newer.
 #
 # Behind a proxy that inspects TLS, pass its CA bundle as the `ca-bundle`
 # secret. The downloads trust it and no layer of the image keeps it:
@@ -55,6 +55,6 @@ RUN --mount=type=bind,source=toolchain,target=/tmp/toolchain \
 # metadata label tells a development container to work as `vscode`, so a
 # repository's devcontainer.json needs only the image.
 LABEL org.opencontainers.image.title="environment" \
-      org.opencontainers.image.description="The toolchain every tannergolden repository's checks run on: Ubuntu 24.04, git, Python 3.12, Node.js 22 and each check tool, pinned." \
+      org.opencontainers.image.description="The development environment for tannergolden repositories: Ubuntu 24.04, git, Python 3.12, Node.js 22 and the standards' check tools, pinned." \
       org.opencontainers.image.licenses="MIT" \
       devcontainer.metadata="[{\"remoteUser\":\"vscode\"}]"

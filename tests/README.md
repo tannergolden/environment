@@ -22,10 +22,10 @@ _Fast checks on the pins, then the image itself._
 
 Two kinds of test, run two ways:
 
-| Kind                        | Needs            | Run by                              | Proves                                                                     |
-| :-------------------------- | :--------------- | :---------------------------------- | :------------------------------------------------------------------------- |
-| `test_*.py`, here           | Python           | `make test-unit`                    | The pins are complete and agree, the installer refuses what it should      |
-| [`image/`](image/README.md) | Docker, an image | `make test-image`, which builds one | The image holds every tool at its pinned version, and the checks run in it |
+| Kind                        | Needs            | Run by                              | Proves                                                                                       |
+| :-------------------------- | :--------------- | :---------------------------------- | :------------------------------------------------------------------------------------------- |
+| `test_*.py`, here           | Python           | `make test-unit`                    | The pins are complete and agree, the installer refuses what it should                        |
+| [`image/`](image/README.md) | Docker, an image | `make test-image`, which builds one | The image holds every tool at its pinned version, and the validator and actionlint run in it |
 
 `make test` runs both, and is the `test-command` that
 [`.github/workflows/checks.yml`](../.github/workflows/checks.yml) runs on every
@@ -45,13 +45,13 @@ whole folder to this repository, this README included.
 
 <!-- AUTO-INDEX:BEGIN dir=. style=log -->
 
-| Entry                                        | Purpose                                                                                                                                                              |
-| :------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`image/`](image/README.md)                  | The tests that check a built image: every tool at its pinned version, Python, Node.js and git, the development user, and the account's own checks running inside it. |
-| [`README.md`](README.md)                     | This file.                                                                                                                                                           |
-| [`test_cloud_setup.py`](test_cloud_setup.py) | Tests for the Claude Code cloud setup script.                                                                                                                        |
-| [`test_install.py`](test_install.py)         | Tests for the installer's refusals.                                                                                                                                  |
-| [`test_toolchain.py`](test_toolchain.py)     | Tests that the toolchain's pins are complete and agree with each other.                                                                                              |
+| Entry                                        | Purpose                                                                                                                                                                             |
+| :------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`image/`](image/README.md)                  | The tests that check a built image: every tool at its pinned version, Python, Node.js and git, the development user, and the repository validator and actionlint running inside it. |
+| [`README.md`](README.md)                     | This file.                                                                                                                                                                          |
+| [`test_cloud_setup.py`](test_cloud_setup.py) | Tests for the Claude Code cloud setup script.                                                                                                                                       |
+| [`test_install.py`](test_install.py)         | Tests for the installer's refusals.                                                                                                                                                 |
+| [`test_toolchain.py`](test_toolchain.py)     | Tests that the toolchain's pins are complete and agree with each other.                                                                                                             |
 
 <!-- AUTO-INDEX:END -->
 

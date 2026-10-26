@@ -125,6 +125,7 @@ updates:
         patterns:
           - '*'
 
+  # A fourth ecosystem, this repository's own, beside the template's three.
   # Keeps the Dockerfile's base, ubuntu:24.04, on its newest digest, so a
   # release takes Ubuntu's security fixes. Only the digest moves: another
   # Ubuntu release is a decision, so its tag is never proposed. The tools the

@@ -94,16 +94,16 @@ _The universal rules first, then this repository's own._
   where each comes from, and which checksums the project itself publishes.
 - Nothing unchecked is installed: every download has a SHA-256 pin, pip takes only hashed wheels, and npm runs no
   install scripts. A tool without a pin is not added.
-- `toolchain/install.sh` is POSIX sh, since the image runs it with `/bin/sh`; the cloud setup script is bash. Python
-  is the standard library only, with single quotes and `from __future__ import annotations`, and tests are
-  `unittest`.
+- `toolchain/install.sh` is POSIX sh, since the image runs it with `/bin/sh`; the cloud setup script is bash. The
+  Python this repository adds uses the standard library only, with single quotes and
+  `from __future__ import annotations`, and tests are `unittest`.
 
 ## Where things live
 
 | Path                                   | Holds                                                                         |
 | :------------------------------------- | :---------------------------------------------------------------------------- |
 | `Dockerfile`                           | The image: the base by digest, Ubuntu's packages, the user, and the installer |
-| `toolchain/`                           | Every pin, and the installer the image and a cloud session both run           |
+| `toolchain/`                           | Every tool's pin, and the installer the image and a cloud session both run    |
 | `setup/`                               | The Claude Code cloud setup script, with placeholders for a release's pins    |
 | `tests/`, `tests/image/`               | The unit tests, and the tests that check a built image                        |
 | `.github/scripts/print-cloud-setup.py` | Fills the setup script's pins from a release's tag                            |
@@ -114,14 +114,17 @@ _The universal rules first, then this repository's own._
 - The image tests need `ENVIRONMENT_IMAGE` and fail without it, rather than pass having checked nothing.
   `unittest discover -s tests` leaves `tests/image/` out on purpose: it has no `__init__.py`.
 - The cloud setup script must exit 0 and never call `exit`: it shares the setup-script field with the intelligence
-  hub's, and a failing setup script stops a session from starting.
+  hub's, which has to run after it, and a session is better started with its own tools than with a failed setup.
+- `toolchain/install.sh` fetches and checks everything before it installs anything, so a failed download changes
+  nothing. Keep every new download in that first half.
 - `markdownlint-cli2` has no version flag; its `--help` names the version and exits 2.
 - The two `.devcontainer` files are switched off in `.github/template-sync`, so a sync never puts the template's
   container back.
 
 ## Ask first
 
-- Cutting a release: moving `1` changes every repository's development container at its next rebuild.
+- Cutting a release: moving `1` changes the image every repository's development container gets the next time a
+  machine pulls it.
 - Moving a version the standards pin before the standards move it.
 - Adding a tool to the image, which every repository's container then carries.
 
