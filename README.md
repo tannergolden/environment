@@ -191,7 +191,6 @@ their own.
 | `semantic-pr.yml`          | The `pr` check: PR title, branch name, commit messages, DCO sign-off                                         |
 | `governance.yml`           | Onboarding, triage, stale sweep, slash commands                                                              |
 | `cut-release.yml`          | The release: the tags, the image for both architectures, and their SBOMs                                     |
-| `release.yml`              | Draft notes, publish assets, registries, prune old releases on request                                       |
 | `maintenance.yml`          | Prunes stale deployments; deletes draft releases on request                                                  |
 | `prune-runs.yml`           | Prunes workflow run history, with its logs and artifacts                                                     |
 | `lifecycle.yml`            | Claimed this repository once; tells you when a new major exists                                              |
