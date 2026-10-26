@@ -67,9 +67,16 @@ from what each file says about itself.
 
 - A change to the `Dockerfile` or to `toolchain/` takes effect here at the
   next **Rebuild Container**.
-- The `docker-in-docker` feature is the one part of this container resolved
-  when it is built rather than pinned. Dependabot's `devcontainers` ecosystem
-  proposes each new version of it, like any other feature.
+- Not everything here is pinned. Resolved when the container is built are
+  the Ubuntu packages the `Dockerfile` adds, as in the published image; the
+  `docker-in-docker` feature, at its newest `4.x`, which Dependabot's
+  `devcontainers` ecosystem proposes new versions of like any other
+  feature; and the moby packages that feature installs, with the key that
+  signs them, from Microsoft's apt repository.
+- It works as `vscode`, and `devcontainer.json` says so itself: building
+  the image here, the dev container tools take their settings from the
+  `Dockerfile`'s base rather than from the label the image sets, and the
+  label they write when they add the feature replaces it.
 - Building behind a proxy that inspects TLS needs its CA bundle as the
   `ca-bundle` build secret. This file passes none, since the bundle's path is
   each machine's own: build from a terminal with `make build BUILD_FLAGS=...`,

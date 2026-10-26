@@ -232,6 +232,10 @@ class DockerfileTests(unittest.TestCase):
         metadata = json.loads(label.group(1).replace('\\"', '"'))
         self.assertEqual(metadata, [{'remoteUser': 'vscode'}])
         self.assertRegex(self.dockerfile, r'useradd [^\n]*--uid 1000 [^\n]* vscode\b')
+        # This repository's own container builds the image and adds a
+        # feature, and the label written for the feature replaces that one.
+        here = (ROOT / '.devcontainer' / 'devcontainer.json').read_text(encoding='utf-8')
+        self.assertRegex(here, r'(?m)^\s*"remoteUser": "vscode",?$')
 
     def test_the_build_runs_the_installer(self) -> None:
         self.assertIn('sh /tmp/toolchain/install.sh', self.dockerfile)

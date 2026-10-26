@@ -12,6 +12,12 @@
     "context": ".."
   },
 
+  // The user to work as, which the image's own label names too. Building
+  // the image here, the dev container tools take their settings from the
+  // Dockerfile's base, not from that label, and replace it with one of
+  // their own when they add the feature below, so without this it is root.
+  "remoteUser": "vscode",
+
   // Docker's engine, CLI and buildx come from Microsoft's signed moby
   // packages. The feature's own downloads of the newest buildx and of
   // Compose are switched off: neither is checked against a pin, and
