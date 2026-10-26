@@ -95,11 +95,16 @@ class PythonPinsTests(unittest.TestCase):
                     self.assertIn('--hash=sha256:', block)
 
     def test_the_installer_takes_only_hashed_wheels_and_resolves_nothing(self) -> None:
-        commands = installer_commands('-m pip install')
-        self.assertEqual(len(commands), 1, commands)
-        for flag in ('--require-hashes', '--no-deps', '--only-binary=:all:', '--requirement "$here/requirements.txt"'):
-            with self.subTest(flag=flag):
-                self.assertIn(flag, commands[0])
+        # The wheels are fetched and checked first, then installed from there
+        # with no index to reach.
+        checked = ('--require-hashes', '--no-deps', '--only-binary=:all:', '--requirement "$here/requirements.txt"')
+        for step, flags in (('-m pip download', checked + ('--dest "$work/wheels"',)),
+                            ('-m pip install', checked + ('--no-index', '--find-links "$work/wheels"'))):
+            commands = installer_commands(step)
+            self.assertEqual(len(commands), 1, commands)
+            for flag in flags:
+                with self.subTest(step=step, flag=flag):
+                    self.assertIn(flag, commands[0])
 
 
 class NodePinsTests(unittest.TestCase):
@@ -132,6 +137,19 @@ class NodePinsTests(unittest.TestCase):
         self.assertEqual(len(commands), 1, commands)
         self.assertIn('"$npm" ci ', commands[0])
         self.assertIn('--ignore-scripts', commands[0])
+
+    def test_every_package_runs_on_the_node_it_is_given(self) -> None:
+        # The image runs the pinned Node.js, and a machine keeps its own only
+        # at that major or newer, so no package may need a newer one.
+        major = int(read_versions()['NODE_VERSION'].split('.')[0])
+        installer = (TOOLCHAIN / 'install.sh').read_text(encoding='utf-8')
+        self.assertIn('-ge "${node_version%%.*}"', installer)
+        for path, entry in self.lock['packages'].items():
+            engines = entry.get('engines')
+            node = engines.get('node', '') if isinstance(engines, dict) else ''
+            for floor in re.findall(r'>=\s*v?([0-9]+)', node):
+                with self.subTest(package=path, engines=node):
+                    self.assertLessEqual(int(floor), major)
 
 
 class DockerfileTests(unittest.TestCase):

@@ -10,12 +10,14 @@
 # setup/claude-cloud-setup.sh. One set of steps and one set of pins, so a tool
 # cannot be one version in the container and another in the session.
 #
-# NOTHING UNCHECKED IS INSTALLED. Every archive is downloaded and checked
-# against its SHA-256 in `versions` before anything is unpacked, so a
-# mismatch stops the install before it has changed anything. pip installs
-# only the wheels requirements.txt hashes, and resolves nothing of its own.
-# npm ci installs only what package-lock.json names, checks each package's
-# integrity hash, and runs no install scripts.
+# NOTHING UNCHECKED IS INSTALLED, AND A FAILED DOWNLOAD CHANGES NOTHING.
+# Everything is fetched into a scratch folder and checked there first: each
+# archive against its SHA-256 in `versions`, each wheel against its hash in
+# requirements.txt, and each npm package against its integrity hash in
+# package-lock.json. pip resolves nothing of its own and builds nothing from
+# source, and npm ci runs no install scripts. Only then is anything
+# installed, so a mismatch, or a host that cannot be reached, stops the
+# install before it has changed anything.
 #
 #     sh install.sh           system-wide, as root: what the image runs
 #     sh install.sh --user    for this user, under ~/.local: what a cloud
@@ -25,14 +27,16 @@
 # /opt/environment, and every command into /usr/local/bin. For a user, the
 # files go into ~/.local/share/environment and the commands into
 # ~/.local/bin, which a cloud session puts ahead of its own copies; a machine
-# that already has Node.js 20 or newer keeps its own.
+# that already has Node.js of the pinned major or newer keeps its own.
 #
-# It needs curl, tar, xz, sha256sum or shasum, and python3 with pip.
+# It needs curl, tar, xz, sha256sum or shasum, and Python 3.12 or newer with
+# pip, able to install for the user when it runs with --user.
 #
-# ENVIRONMENT_MIRROR serves every download from elsewhere: each
+# ENVIRONMENT_MIRROR serves every archive from elsewhere: each
 # https://host/path is fetched from $ENVIRONMENT_MIRROR/host/path instead. A
 # network that cannot reach the public hosts points it at a mirror, and the
-# tests at a folder of stand-ins. The pins still decide what is installed.
+# tests at a folder of stand-ins; pip and npm keep their own index settings.
+# The pins still decide what is installed.
 
 set -eu
 
@@ -64,7 +68,11 @@ if [ "$mode" = system ]; then
   node_root=/usr/local
   pip_scope=''
 else
-  data=${XDG_DATA_HOME:-$HOME/.local/share}/environment
+  # A relative XDG_DATA_HOME is to be ignored, as the XDG specification says.
+  case ${XDG_DATA_HOME:-} in
+    /*) data=$XDG_DATA_HOME/environment ;;
+    *) data=$HOME/.local/share/environment ;;
+  esac
   bin=$HOME/.local/bin
   node_root=$data/node
   pip_scope=--user
@@ -89,6 +97,14 @@ for tool in curl tar xz python3; do
   command -v "$tool" >/dev/null 2>&1 || fail "$tool is not installed, so nothing was"
 done
 python3 -m pip --version >/dev/null 2>&1 || fail 'pip is not installed for python3, so nothing was'
+# The lock is compiled for Python 3.12 and newer: on an older one, pytest
+# would install without the backports it needs there.
+python3 -c 'import sys; sys.exit(sys.version_info < (3, 12))' \
+  || fail "python3 is $(python3 -c 'import platform; print(platform.python_version())'), and the toolchain needs 3.12 or newer, so nothing was installed"
+if [ "$mode" = user ]; then
+  python3 -c 'import site, sys; sys.exit(not site.ENABLE_USER_SITE)' \
+    || fail 'python3 cannot install for this user, as inside a virtual environment, so nothing was installed'
+fi
 
 [ "$(uname -s)" = Linux ] || fail "the toolchain is built for Linux, not $(uname -s)"
 case $(uname -m) in
@@ -99,6 +115,9 @@ esac
 
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
+# A stopped install still clears its scratch folder.
+trap 'exit 143' TERM
+trap 'exit 130' INT
 
 fetch() {
   name=$1 url=$2
@@ -106,7 +125,7 @@ fetch() {
   case $url in
     https://*) [ -z "${ENVIRONMENT_MIRROR:-}" ] || url="${ENVIRONMENT_MIRROR%/}/${url#https://}" ;;
   esac
-  curl -fsSL --retry 3 --connect-timeout 20 --max-time 600 -o "$work/$name.archive" "$url" \
+  curl -fsSL --retry 3 --connect-timeout 20 --max-time 300 -o "$work/$name.archive" "$url" \
     || fail "could not download $url, so nothing was installed"
   actual=$(sha256 "$work/$name.archive")
   [ "$actual" = "$sum" ] \
@@ -115,13 +134,16 @@ fetch() {
 
 # --- Download and check everything first ------------------------------------
 
+# A machine's own Node.js is kept only at the pinned major or newer:
+# markdownlint-cli2 needs Node.js 22.
+node_version=$(pin NODE_VERSION)
 keep_node=no
 if [ "$mode" = user ] && command -v node >/dev/null 2>&1 \
-  && [ "$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)" -ge 20 ]; then
+  && [ "$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)" -ge "${node_version%%.*}" ]; then
   keep_node=yes
 fi
 
-v=$(pin NODE_VERSION)
+v=$node_version
 [ "$keep_node" = yes ] \
   || fetch node "https://nodejs.org/dist/v$v/node-v$v-linux-$node_arch.tar.xz"
 v=$(pin ACTIONLINT_VERSION)
@@ -134,6 +156,31 @@ v=$(pin SHELLCHECK_VERSION)
 fetch shellcheck "https://github.com/koalaman/shellcheck/releases/download/v$v/shellcheck-v$v.linux.$gnu_arch.tar.xz"
 v=$(pin TYPOS_VERSION)
 fetch typos "https://github.com/crate-ci/typos/releases/download/v$v/typos-v$v-$gnu_arch-unknown-linux-musl.tar.gz"
+
+# The wheels, each checked against its hash as it arrives.
+python3 -m pip download --quiet --no-cache-dir --disable-pip-version-check \
+  --require-hashes --no-deps --only-binary=:all: --dest "$work/wheels" --requirement "$here/requirements.txt" \
+  || fail 'pip could not download every wheel requirements.txt pins, each matching its hash, so nothing was installed'
+
+# The npm packages, each checked against its integrity hash, installed into
+# the scratch folder by the Node.js that will run them. npm starts through
+# `env node`, so the Node.js just checked comes first.
+if [ "$keep_node" = yes ]; then
+  npm=npm
+else
+  mkdir "$work/node"
+  tar -xJf "$work/node.archive" -C "$work/node" --strip-components=1 --no-same-owner
+  PATH="$work/node/bin:$PATH"
+  export PATH
+  npm="$work/node/bin/npm"
+fi
+mkdir "$work/npm"
+cp "$here/package.json" "$here/package-lock.json" "$work/npm/"
+# The download cache goes with the scratch folder, rather than staying in
+# the image or in the user's ~/.npm.
+(cd "$work/npm" && "$npm" ci --omit=dev --ignore-scripts --no-audit --no-fund --no-update-notifier \
+  --loglevel=error --cache "$work/npm-cache") \
+  || fail 'npm could not install every package package-lock.json pins, each matching its hash, so nothing was installed'
 
 # --- Install -----------------------------------------------------------------
 
@@ -148,14 +195,9 @@ replace() {
 
 if [ "$keep_node" = yes ]; then
   say "keeping this machine's Node.js $(node --version)"
-  npm=npm
 else
   mkdir -p "$node_root"
   tar -xJf "$work/node.archive" -C "$node_root" --strip-components=1 --no-same-owner
-  # npm starts through `env node`, so the Node.js just installed comes first.
-  PATH="$node_root/bin:$PATH"
-  export PATH
-  npm="$node_root/bin/npm"
   if [ "$mode" = user ]; then
     for command in node npm npx; do
       replace "$command"
@@ -181,23 +223,22 @@ done
 # Ubuntu marks its Python as managed by apt (PEP 668). --break-system-packages
 # lets pip install beside it, which is the point here: these pins are what
 # `python3` imports and runs, so `python3 -m pytest` and the repository
-# validator's `import yaml` get exactly them. Both places this runs, an image
-# build and a cloud session, run it as root on purpose, so pip is told not to
-# warn about that.
+# validator's `import yaml` get exactly them. The wheels come from the scratch
+# folder, already checked, so nothing is fetched now. Both places this runs,
+# an image build and a cloud session, run it as root on purpose, so pip is
+# told not to warn about that.
 for command in pytest py.test pygmentize ruff zizmor; do
   [ ! -L "$bin/$command" ] || replace "$command"
 done
 # shellcheck disable=SC2086 # deliberately unquoted: empty system-wide, --user for a user
 PIP_ROOT_USER_ACTION=ignore python3 -m pip install $pip_scope --break-system-packages --quiet --no-cache-dir \
-  --disable-pip-version-check --no-warn-script-location \
+  --disable-pip-version-check --no-warn-script-location --no-index --find-links "$work/wheels" \
   --require-hashes --no-deps --only-binary=:all: --requirement "$here/requirements.txt"
 
+rm -rf "$data/npm"
 mkdir -p "$data/npm"
 cp "$here/package.json" "$here/package-lock.json" "$data/npm/"
-# The download cache goes with the scratch folder, rather than staying in
-# the image or in the user's ~/.npm.
-(cd "$data/npm" && "$npm" ci --omit=dev --ignore-scripts --no-audit --no-fund --no-update-notifier \
-  --loglevel=error --cache "$work/npm-cache")
+mv "$work/npm/node_modules" "$data/npm/node_modules"
 for command in markdownlint-cli2 prettier; do
   replace "$command"
   ln -s "$data/npm/node_modules/.bin/$command" "$bin/$command"

@@ -7,8 +7,9 @@ WHY THIS EXISTS. toolchain/install.sh promises that nothing unchecked is
 installed: a download that does not match its pin, or does not arrive, stops
 it before it has changed anything. Building the image proves the installer
 works; these prove it refuses. Each runs the real script for a throwaway
-user, with ENVIRONMENT_MIRROR pointing every download at a local folder, so
-nothing is fetched from the network.
+user, with ENVIRONMENT_MIRROR pointing every archive at a local folder and,
+where a test gets as far as pip, pip at an empty one, so nothing is fetched
+from the network.
 
 Run them:
 
@@ -43,11 +44,32 @@ class Installer:
         self.mirror.mkdir()
         self.home.mkdir()
 
-    def run(self, *args: str) -> subprocess.CompletedProcess[str]:
-        env = dict(os.environ, HOME=str(self.home), ENVIRONMENT_MIRROR=self.mirror.as_uri())
+    def run(self, *args: str, **extra: str) -> subprocess.CompletedProcess[str]:
+        env = dict(os.environ, HOME=str(self.home), ENVIRONMENT_MIRROR=self.mirror.as_uri(), **extra)
         env.pop('XDG_DATA_HOME', None)
         return subprocess.run(['sh', str(self.root / 'toolchain' / 'install.sh'), *args],
                               env=env, capture_output=True, text=True, check=False)
+
+    def serve_every_archive(self, wrong: str = '', **extra: str) -> tuple[list[str], subprocess.CompletedProcess[str]]:
+        """Serves each archive the installer asks for, pinned to match, but `wrong`'s, and runs it once more."""
+        versions = self.root / 'toolchain' / 'versions'
+        fetched: list[str] = []
+        for _ in range(len(TOOLS) + 1):
+            result = self.run('--user', **extra)
+            wanted = WANTED.search(result.stderr)
+            if not wanted:
+                break
+            stand_in = pathlib.Path(wanted.group(1).removeprefix('file://'))
+            tool = next(name for name in TOOLS if name.lower() in str(stand_in.relative_to(self.mirror)))
+            stand_in.parent.mkdir(parents=True, exist_ok=True)
+            stand_in.write_bytes(f'a stand-in for {tool}\n'.encode())
+            fetched.append(tool)
+            if tool != wrong:
+                digest = hashlib.sha256(stand_in.read_bytes()).hexdigest()
+                text = re.sub(rf'(?m)^({tool}_SHA256_(?:AMD64|ARM64))=.*$', rf'\g<1>={digest}',
+                              versions.read_text(encoding='utf-8'))
+                versions.write_text(text, encoding='utf-8')
+        return fetched, result
 
     def installed(self) -> list[str]:
         local = self.home / '.local'
@@ -86,29 +108,25 @@ class InstallerTests(unittest.TestCase):
     def test_checks_every_download_before_it_installs_any(self) -> None:
         # Every download arrives, and each matches its pin but the last one,
         # typos', so the refusal comes once the others are fetched and checked.
-        versions = self.installer.root / 'toolchain' / 'versions'
-        fetched: list[str] = []
-        for _ in range(len(TOOLS) + 1):
-            result = self.installer.run('--user')
-            wanted = WANTED.search(result.stderr)
-            if not wanted:
-                break
-            stand_in = pathlib.Path(wanted.group(1).removeprefix('file://'))
-            url = str(stand_in.relative_to(self.installer.mirror))
-            tool = next(name for name in TOOLS if name.lower() in url)
-            stand_in.parent.mkdir(parents=True, exist_ok=True)
-            stand_in.write_bytes(f'a stand-in for {tool}\n'.encode())
-            fetched.append(tool)
-            if tool != 'TYPOS':
-                digest = hashlib.sha256(stand_in.read_bytes()).hexdigest()
-                text = re.sub(rf'(?m)^({tool}_SHA256_(?:AMD64|ARM64))=.*$', rf'\g<1>={digest}',
-                              versions.read_text(encoding='utf-8'))
-                versions.write_text(text, encoding='utf-8')
-
+        fetched, result = self.installer.serve_every_archive(wrong='TYPOS')
         self.assertEqual(fetched[-1:], ['TYPOS'], fetched)
         self.assertLessEqual({'ACTIONLINT', 'GITLEAKS', 'LYCHEE', 'SHELLCHECK'}, set(fetched))
         self.assertEqual(result.returncode, 1, result.stderr)
         self.assertRegex(result.stderr, r'crate-ci/typos/\S+ is not the file pinned in versions')
+        self.assertIn('so nothing was installed', result.stderr)
+        self.assertEqual(self.installer.installed(), [])
+
+    def test_installs_nothing_when_a_wheel_cannot_be_fetched(self) -> None:
+        # Every archive matches its pin, and pip's index is an empty folder:
+        # the wheels are fetched before anything is installed, so a session's
+        # own pytest and ruff are still there when PyPI cannot be reached.
+        empty = self.installer.root / 'empty-index'
+        empty.mkdir()
+        fetched, result = self.installer.serve_every_archive(
+            PIP_INDEX_URL=empty.as_uri(), PIP_CONFIG_FILE=os.devnull)
+        self.assertLessEqual({'ACTIONLINT', 'GITLEAKS', 'LYCHEE', 'SHELLCHECK', 'TYPOS'}, set(fetched))
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn('pip could not download every wheel', result.stderr)
         self.assertIn('so nothing was installed', result.stderr)
         self.assertEqual(self.installer.installed(), [])
 
