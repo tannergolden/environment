@@ -44,19 +44,20 @@ class Installer:
         self.mirror.mkdir()
         self.home.mkdir()
 
-    def run(self, *args: str, **extra: str) -> subprocess.CompletedProcess[str]:
+    def run(self, *args: str, cwd: pathlib.Path | None = None,
+            **extra: str) -> subprocess.CompletedProcess[str]:
         env = dict(os.environ, HOME=str(self.home), ENVIRONMENT_MIRROR=self.mirror.as_uri(), **extra)
         env.pop('XDG_DATA_HOME', None)
         return subprocess.run(['sh', str(self.root / 'toolchain' / 'install.sh'), *args],
-                              env=env, capture_output=True, text=True, check=False)
+                              cwd=cwd, env=env, capture_output=True, text=True, check=False)
 
-    def serve_every_archive(self, wrong: str = '',
+    def serve_every_archive(self, wrong: str = '', *args: str,
                             **extra: str) -> tuple[list[str], subprocess.CompletedProcess[str]]:
         """Serves each archive the installer asks for, pinned to match, but `wrong`'s, and runs it once more."""
         versions = self.root / 'toolchain' / 'versions'
         fetched: list[str] = []
         for _ in range(len(TOOLS) + 1):
-            result = self.run('--user', **extra)
+            result = self.run(*(args or ('--user',)), **extra)
             wanted = WANTED.search(result.stderr)
             if not wanted:
                 break
@@ -131,6 +132,45 @@ class InstallerTests(unittest.TestCase):
         self.assertIn('so nothing was installed', result.stderr)
         self.assertEqual(self.installer.installed(), [])
 
+    def test_fetches_only_the_parts_it_is_asked_for(self) -> None:
+        # The binaries alone: Node.js is never asked for, and the run stops at
+        # typos' mismatch, before pip or npm would fetch anything.
+        fetched, result = self.installer.serve_every_archive('TYPOS', '--user', '--only', 'binaries')
+        self.assertEqual(fetched, ['ACTIONLINT', 'GITLEAKS', 'LYCHEE', 'SHELLCHECK', 'TYPOS'])
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn('so nothing was installed', result.stderr)
+        self.assertEqual(self.installer.installed(), [])
+
+    def test_the_python_tools_alone_fetch_no_archive(self) -> None:
+        empty = self.installer.root / 'empty-index'
+        empty.mkdir()
+        result = self.installer.run('--user', '--only', 'python', PIP_INDEX_URL=empty.as_uri(),
+                                    PIP_CONFIG_FILE=os.devnull)
+        self.assertNotRegex(result.stderr, WANTED)
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertRegex(result.stderr, r'pip could not download every wheel requirements\.txt pins for Python 3\.\d+')
+        self.assertEqual(self.installer.installed(), [])
+
+    def test_runs_the_real_pip_wherever_it_is_started(self) -> None:
+        # Python looks in the folder it is started from before anywhere else,
+        # so a folder called pip there would run in place of pip and decide
+        # what is installed. This one leaves a mark if it ever runs.
+        start = self.installer.root / 'start'
+        marker = self.installer.root / 'hijacked'
+        (start / 'pip').mkdir(parents=True)
+        (start / 'pip' / '__init__.py').write_text('', encoding='utf-8')
+        (start / 'pip' / '__main__.py').write_text(
+            f'import pathlib, sys\npathlib.Path({str(marker)!r}).write_text(" ".join(sys.argv[1:]))\n',
+            encoding='utf-8')
+        empty = self.installer.root / 'empty-index'
+        empty.mkdir()
+        result = self.installer.run('--user', '--only', 'python', cwd=start, PIP_INDEX_URL=empty.as_uri(),
+                                    PIP_CONFIG_FILE=os.devnull)
+        self.assertFalse(marker.exists(), 'a pip folder where the installer was started ran in place of pip')
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn('pip could not download every wheel', result.stderr)
+        self.assertEqual(self.installer.installed(), [])
+
     def test_refuses_a_tool_with_no_pin(self) -> None:
         versions = self.installer.root / 'toolchain' / 'versions'
         kept = [line for line in versions.read_text(encoding='utf-8').splitlines()
@@ -142,7 +182,8 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(self.installer.installed(), [])
 
     def test_rejects_an_option_it_does_not_know(self) -> None:
-        for args in (('--system',), ('--user', '--user')):
+        for args in (('--system',), ('--user', '--user'), ('--user', '--only'), ('--user', '--only', 'go'),
+                     ('--user', '--only', ''), ('--user', '--only', 'binaries', '--only', 'node')):
             with self.subTest(args=args):
                 result = self.installer.run(*args)
                 self.assertEqual(result.returncode, 2)

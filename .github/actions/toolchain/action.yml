@@ -2,7 +2,7 @@
 #
 # 🧰 Toolchain
 #
-# Installs every check tool the environment pins, each at its pinned version,
+# Installs the check tools the environment pins, each at its pinned version,
 # for the job's user, and puts them on PATH ahead of the runner's own copies.
 # It runs toolchain/install.sh, the installer that builds the image and sets
 # up a Claude Code cloud session, from the release this action is called at,
@@ -11,6 +11,15 @@
 # Used as:
 #
 #   - uses: tannergolden/environment/.github/actions/toolchain@v1
+#     with:
+#       tools: binaries
+#
+# `tools` names what the job runs, so it fetches nothing else: `binaries`
+# (actionlint, gitleaks, lychee, shellcheck and typos, from GitHub's
+# releases), `python` (pytest, ruff, zizmor and PyYAML, from PyPI) and `node`
+# (markdownlint-cli2 and Prettier from npm, and Node.js from nodejs.org when
+# the runner's is older than the pinned major), separated by commas. It is
+# `all` when left out.
 #
 # THE INSTALLER COMES WITH THE ACTION. GitHub fetches the action from this
 # repository's source archive at the tag the caller names, toolchain/ with
@@ -26,30 +35,46 @@
 # ahead of that Python's site-packages, so a repository's own pytest or
 # PyYAML installed there would be shadowed by these.
 #
+# IT NEEDS A LINUX RUNNER, amd64 or arm64, with curl, tar and xz, and Python
+# 3.12 or newer with pip for the Python tools, as GitHub's Ubuntu runners
+# have. On any other, the installer says what is missing and the job fails.
+#
 # ---
 
 name: '🧰 Toolchain'
 description: "Installs the environment's pinned check tools for this job, ahead of the runner's own, and fails the job if any download does not match its pin."
 
+inputs:
+  tools:
+    description: 'What to install: all, or binaries, python and node, separated by commas.'
+    required: false
+    default: all
+
 runs:
   using: composite
   steps:
+    # GITHUB_ACTION_PATH rather than github.action_path: in a job that runs
+    # in a container, only the variable names the folder as the container
+    # sees it.
     - name: '🧰 Install The Toolchain'
       shell: sh
       env:
-        INSTALLER: ${{ github.action_path }}/../../../toolchain/install.sh
-      run: sh "$INSTALLER" --user
+        TOOLS: ${{ inputs.tools }}
+      run: sh "$GITHUB_ACTION_PATH/../../../toolchain/install.sh" --user --only "$TOOLS"
 
-    # The installer writes every command to ~/.local/bin. Steps after this
-    # one find them there before anything the runner image carries.
+    # The installer writes every command to ~/.local/bin, replacing any of
+    # the same name already there. Steps after this one find them there
+    # before anything the runner image carries.
     #
     # ACCEPTED FINDING: zizmor's `github-env` audit flags any write to
     # GITHUB_PATH whose value it cannot prove is static. This one is the job
-    # user's own ~/.local/bin, from HOME, which neither a caller nor a pull
-    # request sets, and what is in it is what the step above installed after
-    # checking every download against its pin. Suppressed inline, as the
-    # standards' setup action does, because zizmor's config keys an ignore by
-    # file name, and every composite action is named action.yml.
+    # user's own ~/.local/bin, from the HOME the runner sets. Only an earlier
+    # step of the same job could change HOME, and that step could already put
+    # anything on PATH itself. The folder can hold other commands too; the
+    # step above replaced any that share a name with a tool it installed.
+    # Suppressed inline, as the standards' setup action does, because
+    # zizmor's config keys an ignore by file name, and every composite action
+    # is named action.yml.
     - name: '🛣️ Put It On PATH'
       shell: sh
       run: | # zizmor: ignore[github-env]

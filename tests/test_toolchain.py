@@ -135,6 +135,15 @@ class PythonPinsTests(unittest.TestCase):
         self.assertIsNotNone(pinned)
         self.assertEqual(self.pins.get('PyYAML'), pinned.group(1))
 
+    def test_python_is_checked_before_anything_is_fetched(self) -> None:
+        # A Python too old, or one that cannot install for the user, is known
+        # before the first download rather than after the last.
+        script = (TOOLCHAIN / 'install.sh').read_text(encoding='utf-8')
+        first_fetch = re.search(r'(?m)^\s*fetch \w+ "https://', script).start()
+        for check in ('sys.version_info < (3, 12)', 'site.ENABLE_USER_SITE'):
+            with self.subTest(check=check):
+                self.assertLess(script.index(check), first_fetch)
+
     def test_the_installer_takes_only_hashed_wheels_and_resolves_nothing(self) -> None:
         # The wheels are fetched and checked first, then installed from there
         # with no index to reach.

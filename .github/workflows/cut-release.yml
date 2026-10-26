@@ -16,18 +16,20 @@
 #
 # EACH ARCHITECTURE IS TESTED ON ITS OWN RUNNER BEFORE ANYTHING IS TAGGED.
 # The image is built and its tests run on an amd64 runner and on an arm64
-# one, and the version is tagged only when both pass. The publish job then
-# builds each architecture again, natively, from the same commit.
+# one, the toolchain action installs every tool on each runner and has each
+# version checked, and the version is tagged only when both pass. The publish
+# job then builds each architecture again, natively, from the same commit.
 #
 # DRY RUN FIRST. `dry-run` is on by default: it tests both architectures,
 # then builds both the way the release does, and pushes no tag and no image.
 # The release's own guards (the default branch, a version that moves
 # forward) run only in the real run, before anything is tagged.
 #
-# ⚠️ Moving `1` changes the image every repository's development container
-# will name, for each machine that pulls it next, without anyone on their
-# side doing anything. Treat a release as a production change to every
-# repository at once.
+# ⚠️ Moving `1` changes the image every development container that names it
+# gets, for each machine that pulls it next, and moving `v1` changes the
+# tools the standards' checks install in every repository that calls them,
+# the next time each runs. Neither waits on anyone on their side. Treat a
+# release as a production change to every repository at once.
 #
 # WHY THE IMAGE IS PUBLISHED IN THIS RUN. The standards' release.yml creates
 # the release with the run's own token, and GitHub starts no workflow from
@@ -90,7 +92,7 @@ jobs:
         uses: tannergolden/standards/.github/actions/harden@v1
         with:
           egress-policy: audit
-          notice: '🧪 Verify: lints the commit about to be released, then builds and tests its image for linux/amd64.'
+          notice: '🧪 Verify: lints the commit about to be released, builds and tests its image for linux/amd64, then runs the toolchain action on the runner.'
 
       - name: '📥 Checkout'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -124,6 +126,17 @@ jobs:
       - name: '🧪 Lint, Then Build And Test The Image'
         run: make lint test
 
+      # The toolchain action as other repositories' checks will call it at
+      # this release, after the tests above, so its tools shadow nothing
+      # they ran with.
+      - name: '🧰 Toolchain Action'
+        uses: ./.github/actions/toolchain
+
+      - name: '🔢 Check Each Version On The Runner'
+        env:
+          ENVIRONMENT_IMAGE: host
+        run: python3 -m unittest discover -s tests/image -p 'test_*.py'
+
   verify-arm64:
     name: '🧪 Verify The Release Candidate (linux/arm64)'
     runs-on: ubuntu-24.04-arm
@@ -135,7 +148,7 @@ jobs:
         uses: tannergolden/standards/.github/actions/harden@v1
         with:
           egress-policy: audit
-          notice: '🧪 Verify: builds and tests the image for linux/arm64, on an arm64 runner.'
+          notice: '🧪 Verify: builds and tests the image for linux/arm64 on an arm64 runner, then runs the toolchain action there.'
 
       - name: '📥 Checkout'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -146,6 +159,14 @@ jobs:
       # every architecture, and the amd64 job runs them.
       - name: '🧪 Build And Test The Image'
         run: make test-image
+
+      - name: '🧰 Toolchain Action'
+        uses: ./.github/actions/toolchain
+
+      - name: '🔢 Check Each Version On The Runner'
+        env:
+          ENVIRONMENT_IMAGE: host
+        run: python3 -m unittest discover -s tests/image -p 'test_*.py'
 
   release:
     name: '🏷️ Publish Version & Move Major Tag'
@@ -158,10 +179,12 @@ jobs:
       version: ${{ inputs.version }}
       move-major: ${{ inputs.move-major }}
       # What a consumer resolves at the tag: the Dockerfile the image is built
-      # from, and every file a pinned cloud setup script downloads.
+      # from, every file a pinned cloud setup script downloads, and the
+      # toolchain action the standards' checks call.
       required-files: >-
         Dockerfile toolchain/install.sh toolchain/versions toolchain/requirements.txt
         toolchain/package.json toolchain/package-lock.json setup/claude-cloud-setup.sh
+        .github/actions/toolchain/action.yml
       check-command: 'make lint'
       keep-versions: true
 
