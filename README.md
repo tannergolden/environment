@@ -150,7 +150,8 @@ new Codespace pulls it fresh.
    goes.
 
 If a job after the tag fails, re-run the failed jobs from the run's page: the
-tag and the release stay, and the image is built and pushed again. If the
+tag and the release stay, and the image is built and pushed again. Do it
+within a week, while the SBOMs wait for the job that attaches them. If the
 tagging job itself fails after pushing the tag, a re-run refuses the tag that
 now exists, so cut the next patch instead.
 

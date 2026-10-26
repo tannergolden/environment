@@ -41,7 +41,10 @@
 #
 # THE SBOMS ARE MADE BY JOBS THAT CAN ONLY READ. Each architecture's is made
 # on a runner of that architecture, so the generator catalogs that one, and
-# a last job, which runs nothing but `gh`, attaches both to the release.
+# a last job attaches both to the release. Past the hardening step every job
+# starts with, that job only fetches them and runs `gh`, so the generator
+# never holds the token that can write. The SBOMs are kept a week for it,
+# which is how long a failed attach can be re-run.
 #
 # Every version stays: `keep-versions` turns off the prune the standards' Cut
 # Release runs for every other repository, because a pinned cloud setup
@@ -237,7 +240,7 @@ jobs:
           name: sbom-linux-${{ matrix.arch }}
           path: release/sbom-linux-${{ matrix.arch }}.cdx.json
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
 
   attach:
     name: '📎 Attach The SBOMs'
