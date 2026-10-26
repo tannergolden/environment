@@ -300,7 +300,15 @@ This repository follows it **by link**.
 
 ## 🔒 Licence
 
-MIT. See [`LICENSE`](LICENSE).
+This repository's own files are MIT. See [`LICENSE`](LICENSE).
+
+The image redistributes software under each one's own licence, not this one:
+shellcheck and git are GPL, for instance, and most of the rest are permissive.
+Inside the image, each pinned tool's licence is in
+`/opt/environment/licenses/<tool>/`, Node.js's in `/usr/local/LICENSE`, each
+Python package's in its `.dist-info` folder, each npm package's in its folder
+under `/opt/environment/npm/node_modules/`, and Ubuntu's packages' in
+`/usr/share/doc/<package>/copyright`.
 
 ---
 

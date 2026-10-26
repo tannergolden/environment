@@ -53,8 +53,9 @@ RUN --mount=type=bind,source=toolchain,target=/tmp/toolchain \
 
 # The publish job adds the source, revision, version and creation labels. The
 # metadata label tells a development container to work as `vscode`, so a
-# repository's devcontainer.json needs only the image.
+# repository's devcontainer.json needs only the image. There is no licences
+# label: the image redistributes software under many licences, GPL ones among
+# them, and the README says where each is.
 LABEL org.opencontainers.image.title="environment" \
       org.opencontainers.image.description="The development environment for tannergolden repositories: Ubuntu 24.04, git, Python 3.12, Node.js 22 and the standards' check tools, pinned." \
-      org.opencontainers.image.licenses="MIT" \
       devcontainer.metadata="[{\"remoteUser\":\"vscode\"}]"
