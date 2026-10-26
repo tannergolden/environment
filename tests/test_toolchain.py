@@ -94,6 +94,14 @@ class PythonPinsTests(unittest.TestCase):
                 with self.subTest(package=block.split('==')[0]):
                     self.assertIn('--hash=sha256:', block)
 
+    def test_pyyaml_is_the_one_the_scripts_pin(self) -> None:
+        # Dependabot moves .github/scripts/requirements.txt; the image runs
+        # those scripts, so its PyYAML has to move with them.
+        scripts = (ROOT / '.github' / 'scripts' / 'requirements.txt').read_text(encoding='utf-8')
+        pinned = re.search(r'(?mi)^pyyaml==(\S+)', scripts)
+        self.assertIsNotNone(pinned)
+        self.assertEqual(self.pins.get('PyYAML'), pinned.group(1))
+
     def test_the_installer_takes_only_hashed_wheels_and_resolves_nothing(self) -> None:
         # The wheels are fetched and checked first, then installed from there
         # with no index to reach.

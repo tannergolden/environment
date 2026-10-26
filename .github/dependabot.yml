@@ -156,6 +156,39 @@ updates:
         patterns:
           - '*'
 
+  # The toolchain's own pins, for security updates only. Their versions move
+  # by hand, in step with the standards, so `open-pull-requests-limit: 0`
+  # turns version updates off; a security update still arrives at once, as a
+  # Conventional Commit with this repository's labels. The tests then hold
+  # its lock to the pins in toolchain/: move the pin, and run `make lock`.
+  - package-ecosystem: 'pip'
+    directory: '/toolchain'
+    schedule:
+      interval: 'monthly'
+      time: '07:00'
+      timezone: 'Etc/UTC'
+    open-pull-requests-limit: 0
+    commit-message:
+      prefix: 'build'
+      include: 'scope'
+    labels:
+      - 'type: build'
+      - 'dependencies'
+
+  - package-ecosystem: 'npm'
+    directory: '/toolchain'
+    schedule:
+      interval: 'monthly'
+      time: '07:00'
+      timezone: 'Etc/UTC'
+    open-pull-requests-limit: 0
+    commit-message:
+      prefix: 'build'
+      include: 'scope'
+    labels:
+      - 'type: build'
+      - 'dependencies'
+
   # --- Enable the ones your project actually uses -------------------------
   #
   # Copy the first block above - INCLUDING the commit-message block, or that
