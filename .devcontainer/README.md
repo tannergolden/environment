@@ -27,15 +27,18 @@ one. A change to [`toolchain/`](../toolchain/README.md) is tried in the
 container it makes, before 🏷️ Cut Release publishes it to every repository.
 
 It adds Docker, through the `docker-in-docker` feature, so `make test` builds
-the image and checks every tool in it from inside. When it is created it does
+the image and checks every tool in it from inside. Docker's engine, CLI and
+buildx come from Microsoft's signed moby packages; the feature's own downloads
+of the newest buildx and of Compose, which nothing checks against a pin, are
+switched off. When it is created it does
 what the template's container does: installs the scripts' requirements,
 switches on the [git hooks](../.github/scripts/hooks/README.md), and sets the
 commit message template. The image already holds gitleaks, which the
 `pre-commit` hook scans with.
 
 **This is the one repository whose container builds the image.** Every other
-repository names the published image instead, as the
-[README](../README.md#-how-a-repository-uses-it) shows, which is why the two
+repository will name the published image instead, once the templates point at
+it, as the [README](../README.md#-how-a-repository-uses-it) shows, which is why the two
 files here are switched off in [`.github/template-sync`](../.github/template-sync):
 a sync never puts the template's container back.
 
@@ -64,11 +67,13 @@ from what each file says about itself.
 
 - A change to the `Dockerfile` or to `toolchain/` takes effect here at the
   next **Rebuild Container**.
-- The `docker-in-docker` feature is kept current by Dependabot's
-  `devcontainers` ecosystem, like any other feature.
-- Building behind a proxy that inspects TLS needs its CA bundle, which a
-  development container build cannot pass; `make build BUILD_FLAGS=...` from
-  a terminal can, as the [Makefile](../Makefile) says.
+- The `docker-in-docker` feature is the one part of this container resolved
+  when it is built rather than pinned. Dependabot's `devcontainers` ecosystem
+  proposes each new version of it, like any other feature.
+- Building behind a proxy that inspects TLS needs its CA bundle as the
+  `ca-bundle` build secret. This file passes none, since the bundle's path is
+  each machine's own: build from a terminal with `make build BUILD_FLAGS=...`,
+  as the [Makefile](../Makefile) says.
 
 > [!NOTE]
 > **There is no `settings` block, deliberately.** VS Code reads

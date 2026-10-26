@@ -1,9 +1,10 @@
 // Development container for this repository: the image it defines, built here.
 //
-// Every other repository names the published image. This one builds its own
-// Dockerfile instead, so a change to the toolchain is worked on inside the
-// machine it makes before anything publishes it, and adds Docker, so
-// `make test` can build the image and check it from in here.
+// Every other repository will name the published image, once the templates
+// point at it. This one builds its own Dockerfile instead, so a change to the
+// toolchain is worked on inside the machine it makes before anything
+// publishes it, and adds Docker, so `make test` can build the image and check
+// it from in here.
 {
   "name": "Environment",
   "build": {
@@ -11,8 +12,15 @@
     "context": ".."
   },
 
+  // Docker's engine, CLI and buildx come from Microsoft's signed moby
+  // packages. The feature's own downloads of the newest buildx and of
+  // Compose are switched off: neither is checked against a pin, and
+  // `make test` needs neither.
   "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+    "ghcr.io/devcontainers/features/docker-in-docker:4": {
+      "installDockerBuildx": false,
+      "dockerDashComposeVersion": "none"
+    }
   },
 
   "customizations": {
@@ -40,5 +48,5 @@
   // requirements, the git hooks in .github/scripts/hooks, and the commit
   // message template. The image already holds gitleaks, which the
   // pre-commit hook scans with.
-  "postCreateCommand": "python3 -m pip install --user --require-hashes --requirement .github/scripts/requirements.txt && git config core.hooksPath .github/scripts/hooks && git config commit.template .github/commit-template.txt"
+  "postCreateCommand": "python3 -m pip install --user --require-hashes --only-binary=:all: --requirement .github/scripts/requirements.txt && git config core.hooksPath .github/scripts/hooks && git config commit.template .github/commit-template.txt"
 }
