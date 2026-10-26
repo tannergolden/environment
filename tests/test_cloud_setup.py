@@ -3,10 +3,10 @@
 # SPDX-License-Identifier: MIT
 """Tests for the Claude Code cloud setup script.
 
-WHY THIS EXISTS. setup/claude-cloud-setup.sh runs before a cloud session
-starts, and a setup script that fails stops the session from starting at
-all. So it has to exit 0 whatever happens, run nothing it could not check
-against its pin, and leave the script it is pasted into running. Each test
+WHY THIS EXISTS. setup/claude-cloud-setup.sh runs before every cloud
+session starts, and a session is better started with its own tools than with
+a failed setup. So it has to exit 0 whatever happens, run nothing it could
+not check against its pin, and leave the script it is pasted into running. Each test
 lays a release out in a folder, serves it through ENVIRONMENT_BASE, fills the
 pins as `make cloud-setup` would, and runs the script with bash. The release's
 installer is a stand-in that records how it was called.

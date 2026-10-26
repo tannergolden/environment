@@ -1,6 +1,6 @@
 <!--
 title: '☁️ CLOUD SETUP'
-description: 'The setup script that installs the toolchain into every Claude Code cloud session, pinned to one release, checked file by file, and unable to stop a session from starting.'
+description: 'The setup script that installs the toolchain into every Claude Code cloud session, pinned to one release, checked file by file, and never failing a session''s setup.'
 type: index
 -->
 
@@ -26,11 +26,13 @@ downloads one release's installer and pins, checks each file against its
 SHA-256 before anything runs, and runs the installer for the session's user.
 Every check tool lands in `~/.local/bin`, ahead of the copies the session's
 image carries, at the version the image holds; the session keeps its own
-Python and, when it has one, its own Node.js.
+Python, and its own Node.js when that is 22 or newer.
 
-**It always exits 0.** A setup script that fails stops the session from
-starting, so every failure prints a notice instead, and the session starts
-with the tools its own image has.
+**It always exits 0.** The toolchain is something a session can start
+without, so every failure prints a notice instead, and the session starts with
+the tools its own image has. The installer fetches and checks everything
+before it installs anything, so a failed download leaves those tools as they
+were, and it is stopped if it runs past 15 minutes.
 
 ---
 

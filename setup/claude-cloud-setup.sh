@@ -9,16 +9,18 @@
 # installer and pins, checks each file against its SHA-256 before anything
 # runs, and installs the tools for the session's user, into ~/.local/bin,
 # ahead of the copies the session's image carries. Every check tool is then
-# the version the image holds; the session keeps its own Python and, when it
-# has one, its own Node.js.
+# the version the image holds; the session keeps its own Python, and its own
+# Node.js when that is 22 or newer.
 #
 # Copy it with its pins filled in: `make cloud-setup VERSION=vX.Y.Z` in this
 # repository prints it ready to paste, into the cloud environment's settings
 # under Setup script. The copy here keeps placeholders, and installs nothing.
 #
-# IT NEVER FAILS THE SESSION. A setup script that exits non-zero stops the
-# session from starting, so every failure prints a notice instead, and the
-# session starts with the tools its own image has.
+# IT NEVER FAILS. The toolchain is something a session can start without, so
+# every failure prints a notice and the script exits 0: the session starts
+# with the tools its own image has. The installer fetches and checks
+# everything before it installs anything, so a failed download changes
+# nothing, and it is stopped if it runs past 15 minutes.
 #
 # It runs in a subshell and never exits the script it is pasted into, so it
 # can share the field with another setup script. Paste it above one that
@@ -69,8 +71,17 @@
       [ "$(sha256 "$dir/toolchain/$file")" = "$pin" ] \
         || { notice "toolchain/$file for $VERSION does not match its pin, so nothing was installed"; return 0; }
     done
-    sh "$dir/toolchain/install.sh" --user \
-      || notice 'the installer reported a problem, so the session keeps some of its own tools; see above'
+    status=0
+    if command -v timeout >/dev/null 2>&1; then
+      timeout 900 sh "$dir/toolchain/install.sh" --user || status=$?
+    else
+      sh "$dir/toolchain/install.sh" --user || status=$?
+    fi
+    case "$status" in
+      0) ;;
+      124) notice 'the installer was stopped after 15 minutes; its messages above say how far it got' ;;
+      *) notice 'the installer reported a problem; its message above says what it changed' ;;
+    esac
   }
 
   main
