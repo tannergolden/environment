@@ -119,37 +119,43 @@ repository that wants exactness pins the image's digest instead.
       new repository starts on it.
 - [ ] Update the standards' Environment & Technologies document, which still
       says to pin runtimes with version managers.
-- [ ] Add the intelligence stub, so this repository gets its `AGENTS.md`.
+- [x] Add the intelligence stub, so this repository gets its `AGENTS.md`.
 
 ---
 
 ## 🌿 The Workflows
 
 This repository holds **triggers**. The logic lives in
-[`tannergolden/standards`](https://github.com/tannergolden/standards) and is
-pulled in by `uses:`, so a fix there reaches this repository without a commit
-here.
+[`tannergolden/standards`](https://github.com/tannergolden/standards), or for
+`intelligence-sync.yml` in
+[`tannergolden/intelligence`](https://github.com/tannergolden/intelligence),
+and is pulled in by `uses:`, so a fix there reaches this repository without a
+commit here. `verify-stubs.yml` and `scorecard.yml` are the two that run steps
+of their own instead.
 
-| Workflow                   | Gives you                                                                |
-| :------------------------- | :----------------------------------------------------------------------- |
-| `checks.yml`               | The gates: lint/test/build, secret scan, CodeQL, workflow lint           |
-| `governance.yml`           | PR title and DCO checks, onboarding, triage, stale sweep, slash commands |
-| `release.yml`              | Draft notes, publish assets, registries, prune superseded releases       |
-| `maintenance.yml`          | Prunes stale deployments; deletes draft releases on request              |
-| `prune-runs.yml`           | Prunes workflow run history, with its logs and artifacts                 |
-| `lifecycle.yml`            | Claimed this repository once; tells you when a new major exists          |
-| `dependabot-automerge.yml` | Approves and queues Dependabot's patch and minor updates                 |
-| `ci-failure-alert.yml`     | Opens an issue when a watched workflow fails, closes it on green         |
-| `apply-standards.yml`      | Dispatch-only. The label taxonomy and branch protection                  |
-| `auto-format.yml`          | Formats what a push touched                                              |
-| `preview-deploy.yml`       | Deploys pushes to a preview target, once one is configured               |
-| `verify-stubs.yml`         | Proves every job's permission ceiling matches its called workflow        |
-| `auto-index.yml`           | Redraws every folder log and index after a push, as a pull request       |
-| `template-sync.yml`        | Proposes the template's later fixes as one pull request, when run        |
-| `cut-release.yml`          | Cuts this repository's releases, once adopted                            |
+| Workflow                   | Gives you                                                            |
+| :------------------------- | :------------------------------------------------------------------- |
+| `checks.yml`               | The gates: lint/test/build, secret scan, CodeQL, workflow lint       |
+| `semantic-pr.yml`          | The `pr` check: PR title, branch name, commit messages, DCO sign-off |
+| `governance.yml`           | Onboarding, triage, stale sweep, slash commands                      |
+| `release.yml`              | Draft notes, publish assets, registries, prune superseded releases   |
+| `maintenance.yml`          | Prunes stale deployments; deletes draft releases on request          |
+| `prune-runs.yml`           | Prunes workflow run history, with its logs and artifacts             |
+| `lifecycle.yml`            | Claimed this repository once; tells you when a new major exists      |
+| `dependabot-automerge.yml` | Approves and queues Dependabot's patch and minor updates             |
+| `ci-failure-alert.yml`     | Opens an issue when a watched workflow fails, closes it on green     |
+| `apply-standards.yml`      | Dispatch-only. The label taxonomy and branch protection              |
+| `auto-format.yml`          | Formats what a push touched                                          |
+| `preview-deploy.yml`       | Deploys pushes to a preview target, once one is configured           |
+| `verify-stubs.yml`         | Proves every job's permission ceiling matches its called workflow    |
+| `auto-index.yml`           | Redraws every folder log and index after a push, as a pull request   |
+| `scorecard.yml`            | A weekly OpenSSF Scorecard score, filed under code scanning          |
+| `template-sync.yml`        | Proposes the template's later fixes as one pull request, when run    |
+| `intelligence-sync.yml`    | Proposes the shared agent rules as one pull request, every Monday    |
+| `cut-release.yml`          | Cuts this repository's releases, once adopted                        |
 
 **Do not rename the job ids** `ci` and `secrets` (in `checks.yml`) or `pr` (in
-`governance.yml`). A called workflow reports its checks as
+`semantic-pr.yml`). A called workflow reports its checks as
 `<job id> / <job name>`, so branch protection depends on them.
 
 ---
