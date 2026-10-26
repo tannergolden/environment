@@ -81,7 +81,7 @@
 /.github/workflows/maintenance.yml
 /.github/workflows/preview-deploy.yml
 /.github/workflows/prune-runs.yml
-/.github/workflows/release.yml
+#/.github/workflows/release.yml
 /.github/workflows/scorecard.yml
 /.github/workflows/semantic-pr.yml
 /.github/workflows/template-sync.yml
@@ -178,3 +178,15 @@
 # Docker inside it, so the two .devcontainer lines above are switched off.
 # keep mine: /.github/workflows/checks.yml
 # keep mine: /.github/dependabot.yml
+# This repository releases with Cut Release, so 📦 Release is deleted: its
+# weekly draft, its publish and its prune all assume another release model.
+# The files below describe this repository rather than the template's
+# defaults: an image with no production branch, no formatter, tests where
+# make finds them, and a release verified by the image's attestation.
+# keep mine: /.github/SECURITY.md
+# keep mine: /.github/CONTRIBUTING.md
+# keep mine: /.github/workflows/README.md
+# keep mine: /.github/scripts/README.md
+# keep mine: /.gitattributes
+# keep mine: /.env.example
+# keep mine: /.vscode/extensions.json

@@ -24,6 +24,10 @@ Makefile text eol=lf
 # hook checked out with CRLF fails before its first line runs.
 .github/scripts/hooks/* text eol=lf
 
+# The image's installer reads its pins with sed, so a pin checked out with
+# CRLF ends in a carriage return and names no real download.
+toolchain/versions text eol=lf
+
 # Batch and PowerShell are the opposite case.
 *.bat text eol=crlf
 *.cmd text eol=crlf

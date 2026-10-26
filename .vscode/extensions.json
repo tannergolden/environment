@@ -1,6 +1,6 @@
 {
-  // Language-neutral recommendations only. Add the extension for whatever you
-  // end up writing; this scaffold cannot know what that is.
+  // The template's language-neutral recommendations, and this repository's
+  // own languages: its checks are Python and its scripts are shell.
   "recommendations": [
     "editorconfig.editorconfig",
     "eamodio.gitlens",
@@ -8,6 +8,9 @@
     "streetsidesoftware.code-spell-checker",
     "yzhang.markdown-all-in-one",
     "davidanson.vscode-markdownlint",
-    "tamasfe.even-better-toml"
+    "tamasfe.even-better-toml",
+    "ms-python.python",
+    "charliermarsh.ruff",
+    "timonwong.shellcheck"
   ]
 }

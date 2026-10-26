@@ -37,7 +37,7 @@ one. Your language's extension supplies it.
 
 | Entry                                | Purpose                                                                                                                                     |
 | :----------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------ |
-| [`extensions.json`](extensions.json) | Language-neutral recommendations only. Add the extension for whatever you end up writing; this scaffold cannot know what that is.           |
+| [`extensions.json`](extensions.json) | The template's language-neutral recommendations, and this repository's own languages: its checks are Python and its scripts are shell.      |
 | [`README.md`](README.md)             | This file.                                                                                                                                  |
 | [`settings.json`](settings.json)     | Formatting on save is universal. WHICH formatter is a per-language choice, so no default is set here - your language extension supplies it. |
 
