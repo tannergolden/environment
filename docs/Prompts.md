@@ -149,92 +149,8 @@ Ask me which of this repository's community health files to remove, and wait for
 
 **Find a prompt.** Each runs as it is, except those marked ✏️, which ask for your details.
 
-- **Building the image:** [Write The Dockerfile](#write-the-dockerfile), [Add The Image's Tests](#add-the-images-tests), [Give The Dev Container Docker](#give-the-dev-container-docker)
 - **Tools:** [Add A Tool To The Image](#add-a-tool-to-the-image) ✏️, [Remove A Tool From The Image](#remove-a-tool-from-the-image) ✏️, [Move A Tool To A New Version](#move-a-tool-to-a-new-version) ✏️, [Check The Image Against The Standards' Pins](#check-the-image-against-the-standards-pins)
-- **Using it:** [Find Why A Check Differs In The Image](#find-why-a-check-differs-in-the-image) ✏️, [Check A Published Image Holds What It Promises](#check-a-published-image-holds-what-it-promises) ✏️, [Plan Moving A Repository Onto The Image](#plan-moving-a-repository-onto-the-image) ✏️, [Match A Cloud Session To The Image](#match-a-cloud-session-to-the-image)
-
----
-
-## 🏗️ Building The Image
-
-### Write The Dockerfile
-
-**Use when** the image has no `Dockerfile` yet, the first open item on the README's Getting It Built list.
-
-```text
-<context>
-This repository defines the one machine every repository's checks run on. The README's What It Will Hold names what goes in it: an Ubuntu base pinned by digest, git, Python and Node, and the tools tannergolden/standards' checks run, each at an exact version, built for linux/amd64 and linux/arm64. The release's package job looks for the Dockerfile at the root.
-</context>
-
-<task>
-Write the Dockerfile at the root, with every runtime and tool the README lists at the version the standards pin, and tick its item on the README's checklist.
-</task>
-
-<constraints>
-- Take every version from tannergolden/standards' own files, read from a checkout at v1 or from GitHub, and record where each came from. Where the standards pin none, ask me rather than choosing one.
-- Install each tool from the distribution's packages, its language's registry, or a release download at a fixed version checked against its published checksum. Never pipe a download into a shell; if a tool has no other way in, stop and tell me which.
-- Add only what the checks need, and change no other file.
-- If Docker, buildx or an emulator for the second platform is missing here, stop and tell me which, rather than building one platform only.
-</constraints>
-
-<done_when>
-- docker buildx builds the image for both platforms, and in each, every tool reports the version the README promises.
-- You report each command with the last line of its output, every version with its source, and anything you could not check.
-</done_when>
-```
-
-### Add The Image's Tests
-
-**Use when** the image builds but nothing yet proves it holds what it promises, the item after the `Dockerfile` on the README's Getting It Built list.
-
-```text
-<context>
-A check that passes in the image should pass because of the code, so the image needs a test of its own: every tool there, at the exact version the README promises, on both platforms. tests/ holds the template's unit, integration and e2e folders, each with a README saying what belongs in it, and the ci job in .github/workflows/checks.yml runs whatever its lint-command and test-command name.
-</context>
-
-<task>
-Write tests that run the built image and check each tool's version against the versions the Dockerfile pins, read from it so the two cannot drift, then point the ci job in checks.yml at them.
-</task>
-
-<constraints>
-- Keep the job id ci, and add your settings in checks.yml on lines of their own, as its comments ask.
-- Put each test in the folder whose README describes it. Leave the file logs between AUTO-INDEX markers alone; they are redrawn after each push.
-- A test that cannot reach Docker fails, rather than passing with nothing checked.
-- If the ci job cannot build the image in the time it allows, stop and tell me, with the times you measured.
-</constraints>
-
-<done_when>
-- The tests fail against an image with one tool at a wrong version, and pass against the image as built, shown with both runs.
-- python3 .github/scripts/validate-repository.py and python3 -m unittest discover -s .github/scripts -p 'test_*.py' still pass.
-- You report each command with the last line of its output, and each file you changed.
-</done_when>
-```
-
-### Give The Dev Container Docker
-
-**Use when** you want to build and test the image from inside this repository's own dev container or Codespace, as the README's Getting It Built list asks.
-
-```text
-<context>
-This repository's .devcontainer/devcontainer.json is the template's language-neutral one, and .github/template-sync keeps it current, so a sync would swap any change back unless the two .devcontainer lines there start with a #. Building the image inside the container needs Docker in it.
-</context>
-
-<task>
-Put a # in front of the two .devcontainer lines in .github/template-sync, then give .devcontainer/devcontainer.json Docker and whatever else building and testing the image needs here.
-</task>
-
-<constraints>
-- Change only those two files, and .devcontainer/README.md where it describes the container. Keep the Python feature and the commands the repository's own checks need.
-- Give it Docker through a dev container feature pinned to a major version; if none fits, stop and tell me why.
-- Leave every other line of .github/template-sync as it is.
-</constraints>
-
-<done_when>
-- The container builds from the new file and docker buildx works inside it, or you tell me exactly what you could not run here.
-- python3 .github/scripts/validate-repository.py and python3 -m unittest discover -s .github/scripts -p 'test_*.py' pass.
-- You report each command with the last line of its output.
-</done_when>
-```
+- **Using it:** [Find Why A Check Differs In The Image](#find-why-a-check-differs-in-the-image) ✏️, [Check A Published Image Holds What It Promises](#check-a-published-image-holds-what-it-promises) ✏️, [Plan Moving A Repository Onto The Image](#plan-moving-a-repository-onto-the-image) ✏️
 
 ---
 
@@ -246,22 +162,23 @@ Put a # in front of the two .devcontainer lines in .github/template-sync, then g
 
 ```text
 <context>
-The image holds exactly the tools the standards' checks run, each at the version the standards pin, for linux/amd64 and linux/arm64. The tool: {{TOOL}}.
+The image holds exactly the tools the standards' checks run, each at the version the standards pin, for linux/amd64 and linux/arm64. Every pin is in toolchain/: a release archive in versions, with a SHA-256 for each architecture, which install.sh downloads; a Python package in requirements.in; or an npm package in package.json. The README's What It Holds and toolchain/README.md list what the image holds. The tool: {{TOOL}}.
 </context>
 
 <task>
-Add the tool to the Dockerfile at the version the standards pin, to the image's tests, and to the README's What It Will Hold.
+Pin the tool in toolchain/ at the version the standards pin, install it with the others, and add it to the image's tests, the README's What It Holds and toolchain/README.md.
 </task>
 
 <constraints>
 - Take the version from the standards' files, and name the file; if they pin none, ask me.
-- Install it the way the Dockerfile installs the others: a package, a registry, or a release download checked against its published checksum, never a download piped into a shell. If it cannot be had that way for both platforms, stop and tell me.
+- Pin it the way the others are pinned. An archive takes a SHA-256 for each architecture, from the project's own published checksums where it publishes them, and its download goes in the first half of install.sh, where everything is checked before anything is installed. A Python or npm package takes a line in requirements.in or package.json, then make lock. Never pipe a download into a shell. If it cannot be had that way for both architectures, stop and tell me.
+- An archive also goes in the TOOLS lists in tests/test_toolchain.py and tests/test_install.py, and every tool gets its version command in tests/image/test_image.py.
 - If any detail above is still a placeholder in double braces, ask me for it before you start.
 </constraints>
 
 <done_when>
-- The image builds for both platforms, the tests pass, and the new tool reports its version in each.
-- You report each command with the last line of its output, the version and its source, and that the release this needs is a minor one.
+- make lint and make test pass, and in the image the new tool reports the version it is pinned at.
+- You report each command with the last line of its output, the version and its source, each checksum's source, and that the release this needs is a minor one.
 </done_when>
 ```
 
@@ -275,17 +192,18 @@ Repositories pull the image by tag, and some may call a tool in it directly, fro
 </context>
 
 <task>
-Find everything that still uses the tool. If nothing does, take it out of the Dockerfile, the image's tests and the README.
+Find everything that still uses the tool. If nothing does, take its pin out of toolchain/, and the tool out of install.sh, the tests, the README's What It Holds and toolchain/README.md.
 </task>
 
 <constraints>
 - Search tannergolden/standards and every other repository on this account you can read for the tool's name, read only, and list each use with its file and line. Edit no other repository.
 - If anything still uses it, stop and show me the list: removing it then is my decision.
+- If it is a Python or npm package, run make lock after removing its line.
 - If any detail above is still a placeholder in double braces, ask me for it before you start.
 </constraints>
 
 <done_when>
-- The image builds for both platforms without the tool, and the tests pass.
+- make lint and make test pass without the tool.
 - You report each command with the last line of its output, every use you found, and the line the next major's release notes should carry.
 </done_when>
 ```
@@ -296,22 +214,22 @@ Find everything that still uses the tool. If nothing does, take it out of the Do
 
 ```text
 <context>
-A version lives in more than one place: the Dockerfile and the image's tests here, and in tannergolden/standards its workflows, its Makefile and its dev container, where its AGENTS.md names the copies of ruff and pytest. The image and the standards drifting apart is what this repository exists to prevent. The tool: {{TOOL}}. The version: {{VERSION}}.
+A version lives in more than one place: here, its pin in toolchain/, either a version with both of its SHA-256 sums in versions or a line in requirements.in or package.json with its lock; and in tannergolden/standards its workflows, its Makefile and its dev container, where its AGENTS.md names the copies of ruff and pytest. The image and the standards drifting apart is what this repository exists to prevent. The tool: {{TOOL}}. The version: {{VERSION}}.
 </context>
 
 <task>
-Move the tool to that version here, and list every other place its old version is pinned, in the standards and in any other repository you can read, for me to move there.
+Move the tool to that version here, following Moving A Version in toolchain/README.md, and list every other place its old version is pinned, in the standards and in any other repository you can read, for me to move there.
 </task>
 
 <constraints>
-- Change only this repository. Take the checksum from the tool's own published checksums, never from memory.
+- Change only this repository. Take each checksum from the tool's own published checksums, never from memory, and change the version and both of its sums in one commit, with make lock where a lock depends on it.
 - Read the release notes between the two versions. If the new one changes what a check reports, such as rules it turns on by default, stop and tell me which before you change anything.
 - If any detail above is still a placeholder in double braces, ask me for it before you start.
 </constraints>
 
 <done_when>
-- The image builds for both platforms, and the tests pass at the new version.
-- You report each command with the last line of its output, the checksum's source, and every other pin to move, with its file and line.
+- make lint and make test pass at the new version, the image tests included.
+- You report each command with the last line of its output, each checksum's source, and every other pin to move, with its file and line.
 </done_when>
 ```
 
@@ -321,11 +239,11 @@ Move the tool to that version here, and list every other place its old version i
 
 ```text
 <context>
-The image is worth pulling only while it holds exactly what the standards' checks run. tannergolden/standards pins its tools in its workflows, its composite actions, its Makefile, its dev container and its configuration files, some in more than one place.
+The image is worth pulling only while it holds exactly what the standards' checks run. tannergolden/standards pins its tools in its workflows, its composite actions, its Makefile, its dev container and its configuration files, some in more than one place. This repository pins every tool the image holds in toolchain/: versions, requirements.in and package.json.
 </context>
 
 <task>
-List every tool and version the standards pin, with each place it is pinned, and compare them with the Dockerfile and the image's tests.
+List every tool and version the standards pin, with each place it is pinned, and compare them with the pins in toolchain/.
 </task>
 
 <constraints>
@@ -372,21 +290,22 @@ The cause in one line. Then the evidence from each place, side by side: the tool
 
 ```text
 <context>
-Each release publishes ghcr.io/tannergolden/environment for linux/amd64 and linux/arm64, tagged with its version and latest, with an SBOM and a provenance attestation from the standards' release workflows. The image: {{IMAGE}}.
+Each release publishes ghcr.io/tannergolden/environment for linux/amd64 and linux/arm64, tagged with its version, its major and latest, with an SBOM of each architecture attached to the release and a provenance attestation. docs/distribution/Release-Verification.md says how to check each. The image: {{IMAGE}}.
 </context>
 
 <task>
-Pull the image for both platforms, run the image's tests against it, and check its tags, its SBOM and its attestation against what the release says.
+Pull the image for both platforms, run the image's tests against it, and check its tags, its SBOMs and its attestation against what the release says, as docs/distribution/Release-Verification.md describes.
 </task>
 
 <constraints>
 - Change nothing, and push nothing to the registry.
+- Run the image's tests from a checkout of the release's tag, with ENVIRONMENT_IMAGE naming the image as tests/image/README.md shows, so they compare it with that release's pins. make test-image builds an image of its own, so it cannot check a published one.
 - Name what you could not check, such as a platform this machine cannot run, rather than counting it as passed.
 - If any detail above is still a placeholder in double braces, ask me for it before you start.
 </constraints>
 
 <output>
-A verdict first. Then each platform with its digest and every tool's version against the README, each tag and the digest it points to, the SBOM's list against the tools, and whether the attestation verifies. Last, the commands you ran, and anything unverified.
+A verdict first. Then each platform with its digest and every tool's version against its pin, each tag and the digest it points to, each SBOM's list against the tools, and whether the attestation verifies. Last, the commands you ran, and anything unverified.
 </output>
 ```
 
@@ -413,31 +332,6 @@ Plan the move: what the repository's dev container, CI jobs and documents would 
 <output>
 The order to do it in. For each repository involved, each file, the change and why. Then the gaps in the image, and what to test before and after the move.
 </output>
-```
-
-### Match A Cloud Session To The Image
-
-**Use when** an AI agent's cloud session, such as Claude Code's, has to run the checks with the image's exact tools, but starts from its own machine and takes a setup script instead.
-
-```text
-<context>
-The README's How A Repository Uses It says a Claude Code cloud session starts from its own image and takes a setup script, so it has to install the same versions by script. Those versions are the ones the Dockerfile pins.
-</context>
-
-<task>
-Write a setup script that a cloud session of any repository on this account can run to install, at the Dockerfile's exact versions, every tool the checks need that the session's machine lacks.
-</task>
-
-<constraints>
-- Read each version from the Dockerfile, so the two cannot drift; if there is no Dockerfile yet, stop and tell me.
-- Install the way the Dockerfile does: packages, registries or checksummed release downloads, never a download piped into a shell. Ask for no input, and put no secret in the script.
-- Put it in the folder whose README describes a file like it, add it to the README, and write nothing in another repository.
-</constraints>
-
-<done_when>
-- The script runs twice in a row in a fresh Ubuntu container, the second run changing nothing, and leaves every tool at the Dockerfile's version.
-- You report each command with the last line of its output, and what I must paste into each cloud environment's settings for it to run.
-</done_when>
 ```
 
 ---
