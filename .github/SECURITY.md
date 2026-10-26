@@ -156,8 +156,9 @@ Each of these is configured by the files in this repository or by
 - **Dependency updates**: Dependabot keeps the workflow actions, the development
   container, the repository scripts' requirements and the Dockerfile's base
   image current, waits three days before proposing a new version, and opens
-  security updates at once. The toolchain's own pins move by hand, in step with
-  the standards, as [`toolchain/README.md`](../toolchain/README.md) says.
+  security updates at once. The toolchain's own pins move by hand, here, and
+  reach the standards' checks through the toolchain action, as
+  [`toolchain/README.md`](../toolchain/README.md) says.
 - **Supply-chain score**: OpenSSF Scorecard rates the repository weekly and
   files its findings under code scanning (public repositories).
 - **Hardened runners**: every job starts by auditing its network egress.

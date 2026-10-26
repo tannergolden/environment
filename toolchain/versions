@@ -5,15 +5,16 @@
 # Node tools in package-lock.json, beside this file; the base image is
 # pinned by digest in the Dockerfile.
 #
-# A version mirrors what the checks already run wherever they pin one, so a
-# tool behaves here as it does in CI:
+# Each version started as the one the standards' checks ran when this
+# repository took them over. They install these now, through
+# .github/actions/toolchain, so a tool behaves in CI as it does in the image:
 #
 #   NODE        22.x, the Node.js line ci.yml sets up. The newest 22 release.
-#   ACTIONLINT  The version lint-workflows.yml installs, in the standards.
-#   GITLEAKS    The version gitleaks-action installs for 🔍 Scan for Secrets.
-#   TYPOS       The version of the typos action 📝 Check Spelling runs.
-#   LYCHEE      The version the lychee action 🔗 Check Links runs installs.
-#   SHELLCHECK  The newest release. actionlint calls whichever the runner has.
+#   ACTIONLINT  The version lint-workflows.yml built, in the standards.
+#   GITLEAKS    The version gitleaks-action installed for 🔍 Scan for Secrets.
+#   TYPOS       The version of the typos action 📝 Check Spelling ran.
+#   LYCHEE      The version the lychee action 🔗 Check Links ran installed.
+#   SHELLCHECK  The newest release. actionlint called whichever the runner had.
 #
 # Each SHA-256 is of the release archive install.sh downloads for that
 # architecture: AMD64 for linux/amd64, ARM64 for linux/arm64. Node's,

@@ -90,8 +90,9 @@ _The universal rules first, then this repository's own._
 
 ## Conventions
 
-- A version mirrors what the standards' checks run wherever they pin one. The header of `toolchain/versions` says
-  where each comes from, and which checksums the project itself publishes.
+- This repository owns every check tool's version. The standards' checks install them through
+  `.github/actions/toolchain`, so a version moved here reaches every repository's CI with the next release. The
+  header of `toolchain/versions` says where each started, and which checksums each project publishes.
 - Nothing unchecked is installed: every download has a SHA-256 pin, pip takes only hashed wheels, and npm runs no
   install scripts. A tool without a pin is not added.
 - `toolchain/install.sh` is POSIX sh, since the image runs it with `/bin/sh`; the cloud setup script is bash. The
@@ -104,6 +105,7 @@ _The universal rules first, then this repository's own._
 | :------------------------------------- | :---------------------------------------------------------------------------- |
 | `Dockerfile`                           | The image: the base by digest, Ubuntu's packages, the user, and the installer |
 | `toolchain/`                           | Every tool's pin, and the installer the image and a cloud session both run    |
+| `.github/actions/toolchain/`           | The action that runs that installer in a CI job, as the standards' checks do  |
 | `setup/`                               | The Claude Code cloud setup script, with placeholders for a release's pins    |
 | `tests/`, `tests/image/`               | The unit tests, and the tests that check a built image                        |
 | `.github/scripts/print-cloud-setup.py` | Fills the setup script's pins from a release's tag                            |
@@ -118,14 +120,16 @@ _The universal rules first, then this repository's own._
 - `toolchain/install.sh` fetches and checks everything before it installs anything, so a failed download changes
   nothing. Keep every new download in that first half.
 - `markdownlint-cli2` has no version flag; its `--help` names the version and exits 2.
+- The toolchain action's Python packages go into the user site, ahead of site-packages, so call it only in jobs
+  that run checks, never before a repository's own tests, whose pytest or PyYAML it would shadow.
 - The two `.devcontainer` files are switched off in `.github/template-sync`, so a sync never puts the template's
   container back.
 
 ## Ask first
 
 - Cutting a release: moving `1` changes the image every repository's development container gets the next time a
-  machine pulls it.
-- Moving a version the standards pin before the standards move it.
+  machine pulls it, and moving `v1` changes the tools every repository's checks run.
+- Moving a version: once released, every repository's checks run it.
 - Adding a tool to the image, which every repository's container then carries.
 
 ## Overrides

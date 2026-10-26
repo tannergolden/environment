@@ -22,11 +22,11 @@ _Trust the signature and the digest, not the tag._
 
 🏷️ Cut Release publishes each version in three places:
 
-| Where                                    | What                                                                                                                                              | Attested                                                                        |
-| :--------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------ | :------------------------------------------------------------------------------ |
-| `ghcr.io/tannergolden/environment:X.Y.Z` | The image: a list of one image per architecture, `linux/amd64` and `linux/arm64`. `X` and `latest` name the same list when the release moved them | Yes: a build provenance attestation on the list's digest                        |
-| The release page for `vX.Y.Z`            | `sbom-linux-amd64.cdx.json` and `sbom-linux-arm64.cdx.json`: a CycloneDX SBOM of each architecture's image                                        | No                                                                              |
-| The git tag `vX.Y.Z`                     | The source, including the files a pinned cloud setup script downloads                                                                             | No: the [cloud setup script](../../setup/README.md) checks each against its pin |
+| Where                                    | What                                                                                                                                              | Attested                                                                                                                                          |
+| :--------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ghcr.io/tannergolden/environment:X.Y.Z` | The image: a list of one image per architecture, `linux/amd64` and `linux/arm64`. `X` and `latest` name the same list when the release moved them | Yes: a build provenance attestation on the list's digest                                                                                          |
+| The release page for `vX.Y.Z`            | `sbom-linux-amd64.cdx.json` and `sbom-linux-arm64.cdx.json`: a CycloneDX SBOM of each architecture's image                                        | No                                                                                                                                                |
+| The git tag `vX.Y.Z`                     | The source, including the files a pinned cloud setup script downloads, and the toolchain action CI calls                                          | No: the [cloud setup script](../../setup/README.md) checks each against its pin, and the action checks every download against the pins in the tag |
 
 The attestation is a signed statement that names the image's digest, the
 repository and commit it was built from, and the workflow that built it. There

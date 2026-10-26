@@ -21,18 +21,24 @@ _One installer. One set of pins. Two machines._
 ## 💡 What This Folder Is For
 
 The pins and the installer. The [`Dockerfile`](../Dockerfile) runs
-[`install.sh`](install.sh) as it builds the image, and a Claude Code cloud
+[`install.sh`](install.sh) as it builds the image, a Claude Code cloud
 session runs the same file from a release, through the
-[cloud setup script](../setup/README.md). Both install the same check tools
-at the same versions, by the same steps. A cloud session keeps its own
-Python, and its own Node.js when that is 22 or newer.
+[cloud setup script](../setup/README.md), and a GitHub Actions job runs it
+through the [toolchain action](../.github/actions/toolchain/README.md), which
+is how the standards' checks get their tools. All three install the same
+check tools at the same versions, by the same steps. A cloud session or a job
+keeps its own Python, and its own Node.js when that is 22 or newer.
 
-| Pinned in         | What                                                                                                   | Mirrors                                                     |
+| Pinned in         | What                                                                                                   | Started from                                                |
 | :---------------- | :----------------------------------------------------------------------------------------------------- | :---------------------------------------------------------- |
-| `versions`        | Node.js, actionlint, gitleaks, lychee, shellcheck and typos: a version, and a SHA-256 per architecture | Its header says which check each one matches                |
+| `versions`        | Node.js, actionlint, gitleaks, lychee, shellcheck and typos: a version, and a SHA-256 per architecture | Its header says which check each one came from              |
 | `requirements.in` | PyYAML, pytest, ruff and zizmor                                                                        | The standards' pins, and the scripts' PyYAML                |
 | `package.json`    | markdownlint-cli2 and Prettier                                                                         | The standards' Prettier; markdownlint-cli2's newest release |
 | The `Dockerfile`  | Ubuntu 24.04, by digest                                                                                | The Ubuntu release CI's `ubuntu-latest` runners use today   |
+
+Each version started as the one the standards' checks ran when this folder
+took them over. This folder owns them now: the standards install them through
+the toolchain action, so a version moves here and the checks follow.
 
 `requirements.txt` and `package-lock.json` are compiled from the two pin files
 by `make lock`, never written by hand: every package in them, the ones the
@@ -60,11 +66,12 @@ cannot be reached, stops it before it has changed anything.
    needs uv and npm.
 4. Run `make test`, which builds the image and checks every version in it
    against the pins.
-5. Where the version mirrors a standards pin, move the standards first, or
-   say in the pull request why this one leads.
+5. Change nothing in the standards: their checks install every version from
+   here, through the toolchain action.
 
 A release then publishes it: nothing reaches a repository's development
-container until 🏷️ Cut Release moves `1`.
+container until 🏷️ Cut Release moves `1`, and nothing reaches its checks until
+it moves `v1`, the tag the standards call the toolchain action at.
 
 ---
 

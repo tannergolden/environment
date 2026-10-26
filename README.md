@@ -61,14 +61,15 @@ tools.
 
 ## 🧱 What It Holds
 
-| Part                                | What it is                                                                                                                                                                                                                                                                                      |
-| :---------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The image                           | Ubuntu 24.04 pinned by digest; git, curl, make and Python 3.12 with pip, from Ubuntu's archive; Node.js 22; and actionlint, gitleaks, lychee, shellcheck, typos, ruff, pytest, zizmor, PyYAML, Prettier and markdownlint-cli2, each at the version `toolchain/` pins. A `vscode` user with sudo |
-| [`Dockerfile`](Dockerfile)          | The image's definition, at the root, where the release's publish job looks for it                                                                                                                                                                                                               |
-| [`toolchain/`](toolchain/README.md) | Every tool's pin, and the installer the image and a cloud session both run                                                                                                                                                                                                                      |
-| [`setup/`](setup/README.md)         | The Claude Code cloud setup script, printed pinned to a release                                                                                                                                                                                                                                 |
-| [`tests/`](tests/README.md)         | Checks that the pins agree, that the installer refuses what it should, and that a built image holds each tool at its pinned version                                                                                                                                                             |
-| Each release                        | The image for `linux/amd64`, for Codespaces and Actions, and `linux/arm64`, for Apple silicon, each tested and built on its own architecture, with a provenance attestation, and an SBOM of each architecture on the release                                                                    |
+| Part                                                                | What it is                                                                                                                                                                                                                                                                                      |
+| :------------------------------------------------------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The image                                                           | Ubuntu 24.04 pinned by digest; git, curl, make and Python 3.12 with pip, from Ubuntu's archive; Node.js 22; and actionlint, gitleaks, lychee, shellcheck, typos, ruff, pytest, zizmor, PyYAML, Prettier and markdownlint-cli2, each at the version `toolchain/` pins. A `vscode` user with sudo |
+| [`Dockerfile`](Dockerfile)                                          | The image's definition, at the root, where the release's publish job looks for it                                                                                                                                                                                                               |
+| [`toolchain/`](toolchain/README.md)                                 | Every tool's pin, and the installer the image and a cloud session both run                                                                                                                                                                                                                      |
+| [`.github/actions/toolchain/`](.github/actions/toolchain/README.md) | The action that runs that installer in a GitHub Actions job, which is how the standards' checks get their tools                                                                                                                                                                                 |
+| [`setup/`](setup/README.md)                                         | The Claude Code cloud setup script, printed pinned to a release                                                                                                                                                                                                                                 |
+| [`tests/`](tests/README.md)                                         | Checks that the pins agree, that the installer refuses what it should, and that a built image holds each tool at its pinned version                                                                                                                                                             |
+| Each release                                                        | The image for `linux/amd64`, for Codespaces and Actions, and `linux/arm64`, for Apple silicon, each tested and built on its own architecture, with a provenance attestation, and an SBOM of each architecture on the release                                                                    |
 
 Each release tags the image with its version, such as `1.0.0`, the moving
 major `1`, and `latest`. A repository that wants exactness pins the image's
@@ -97,9 +98,10 @@ The image's own label makes a development container work as `vscode`, so that
 is the whole file. Add `features` or a `postCreateCommand` for what one project
 needs beyond it.
 
-- **A repository generated from the templates**: once the templates carry this
-  file, 🔄 Template Sync brings it to each repository that runs it, as a pull
-  request.
+- **The repositories other repositories call**: the standards and the
+  intelligence hub name the image in their own development containers. The
+  templates keep a container of their own, so a repository generated from them
+  names the image only when it chooses to, with this file.
 - **A Codespace**: it starts from the same file. Your dotfiles' `install.sh`
   runs in it with the `curl` and `python3` the image carries, and installs the
   agent rules from the intelligence hub once the dotfiles pin a hub release.
@@ -107,10 +109,11 @@ needs beyond it.
   [cloud setup script](setup/README.md) instead, which installs the same check
   tools at the same versions for the session's user. The session keeps its own
   Python, and its own Node.js when that is 22 or newer.
-- **CI**: the standards' checks install their tools on the runner, at the
-  versions this image mirrors, except shellcheck, which is whichever the runner
-  carries. Running the checks inside the image would be a change to the
-  standards, not to this repository.
+- **CI**: the standards' checks install their tools with this repository's
+  [toolchain action](.github/actions/toolchain/README.md), at `@v1`, so every
+  repository that calls them runs the image's tools with nothing of its own to
+  change. That reaches a repository with the first standards release that
+  carries it. A repository's own lint and test commands keep the runner's tools.
 
 A machine pulls `:1` the first time it needs it and keeps that image through
 rebuilds until it pulls again: a new release reaches it after
@@ -157,7 +160,9 @@ newest run of it. If the tagging job itself fails after pushing the tag, a
 re-run refuses the tag that now exists, so cut the next patch instead.
 
 A release changes what every repository naming `:1` gets the next time a
-machine pulls it, so treat one as a production change to all of them at once.
+machine pulls it, and moving `v1` changes the tools every repository's checks
+run through the toolchain action, the next time each runs. Treat one as a
+production change to all of them at once.
 
 ---
 
@@ -165,16 +170,19 @@ machine pulls it, so treat one as a production change to all of them at once.
 
 What this repository cannot do on its own:
 
-- [ ] Point both golden path templates' `.devcontainer/devcontainer.json` at
-      `ghcr.io/tannergolden/environment:1`, together, and release them, so
-      🔄 Template Sync offers it to every repository generated from them. The
-      knowledge vault template takes it the same way, and passes it on to the
-      vaults made from it with its own release.
-- [ ] Update the standards' Environment & Technologies document, which still
-      says to pin runtimes with version managers.
-- [ ] Decide whether the standards' checks run inside the image, which would
-      make CI and every container one machine, and would put GHCR in the path
-      of every repository's CI.
+- [ ] Cut a standards release once its `Development` is green. Its checks then
+      take their tools from the toolchain action, and every repository's
+      checks with them. Until then they run the standards' own pins, which
+      match the first release's.
+- [ ] Paste the cloud setup script, printed by `make cloud-setup`, into the
+      cloud environment's settings, above the intelligence hub's.
+
+The templates keep a development container of their own on purpose: only the
+repositories other repositories call, the standards and the intelligence hub,
+name the image.
+[ADR-0005](docs/adrs/ADR-0005-Install-The-Toolchain-In-CI-Through-An-Action.md)
+records why CI installs the tools through the action instead of running inside
+the image.
 
 ---
 
@@ -185,27 +193,27 @@ Most workflows here hold only **triggers**: the logic lives in
 pulled in by `uses:`, so a fix there reaches this repository without a commit
 here. 🔁 Intelligence Sync calls the intelligence hub's instead, and
 🏷️ Cut Release, 🛡️ OpenSSF Scorecard and 🔬 Verify Stub Ceilings run jobs of
-their own.
+their own, as does the `toolchain` job in 🚦 Checks.
 
-| Workflow                   | Gives you                                                                                                    |
-| :------------------------- | :----------------------------------------------------------------------------------------------------------- |
-| `checks.yml`               | The gates: `make lint` and `make test`, which builds and tests the image, secret scan, CodeQL, workflow lint |
-| `semantic-pr.yml`          | The `pr` check: PR title, branch name, commit messages, DCO sign-off                                         |
-| `governance.yml`           | Onboarding, triage, stale sweep, slash commands                                                              |
-| `cut-release.yml`          | The release: the tags, the image for both architectures, and their SBOMs                                     |
-| `maintenance.yml`          | Prunes stale deployments; deletes draft releases on request                                                  |
-| `prune-runs.yml`           | Prunes workflow run history, with its logs and artifacts                                                     |
-| `lifecycle.yml`            | Claimed this repository once; tells you when a new major exists                                              |
-| `dependabot-automerge.yml` | Approves and queues Dependabot's patch and minor updates                                                     |
-| `ci-failure-alert.yml`     | Opens an issue when a watched workflow fails, closes it on green                                             |
-| `apply-standards.yml`      | Dispatch-only. The label taxonomy, the settings and branch protection                                        |
-| `auto-format.yml`          | Formats what a push touched, once a formatter is configured; none is here, so it runs none                   |
-| `preview-deploy.yml`       | Deploys pushes to a preview target, once one is configured                                                   |
-| `verify-stubs.yml`         | Proves every job's permission ceiling matches its called workflow                                            |
-| `auto-index.yml`           | Redraws every folder log and index after a push, as a pull request                                           |
-| `scorecard.yml`            | A weekly OpenSSF Scorecard score, filed under code scanning                                                  |
-| `template-sync.yml`        | Proposes the template's later fixes as one pull request, when run                                            |
-| `intelligence-sync.yml`    | Proposes the shared agent rules as one pull request, every Monday                                            |
+| Workflow                   | Gives you                                                                                                                                              |
+| :------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `checks.yml`               | The gates: `make lint` and `make test`, which builds and tests the image, secret scan, CodeQL, workflow lint, and the toolchain action run on a runner |
+| `semantic-pr.yml`          | The `pr` check: PR title, branch name, commit messages, DCO sign-off                                                                                   |
+| `governance.yml`           | Onboarding, triage, stale sweep, slash commands                                                                                                        |
+| `cut-release.yml`          | The release: the tags, the image for both architectures, and their SBOMs                                                                               |
+| `maintenance.yml`          | Prunes stale deployments; deletes draft releases on request                                                                                            |
+| `prune-runs.yml`           | Prunes workflow run history, with its logs and artifacts                                                                                               |
+| `lifecycle.yml`            | Claimed this repository once; tells you when a new major exists                                                                                        |
+| `dependabot-automerge.yml` | Approves and queues Dependabot's patch and minor updates                                                                                               |
+| `ci-failure-alert.yml`     | Opens an issue when a watched workflow fails, closes it on green                                                                                       |
+| `apply-standards.yml`      | Dispatch-only. The label taxonomy, the settings and branch protection                                                                                  |
+| `auto-format.yml`          | Formats what a push touched, once a formatter is configured; none is here, so it runs none                                                             |
+| `preview-deploy.yml`       | Deploys pushes to a preview target, once one is configured                                                                                             |
+| `verify-stubs.yml`         | Proves every job's permission ceiling matches its called workflow                                                                                      |
+| `auto-index.yml`           | Redraws every folder log and index after a push, as a pull request                                                                                     |
+| `scorecard.yml`            | A weekly OpenSSF Scorecard score, filed under code scanning                                                                                            |
+| `template-sync.yml`        | Proposes the template's later fixes as one pull request, when run                                                                                      |
+| `intelligence-sync.yml`    | Proposes the shared agent rules as one pull request, every Monday                                                                                      |
 
 **Do not rename the job ids** `ci` and `secrets` (in `checks.yml`) or `pr` (in
 `semantic-pr.yml`). A called workflow reports its checks as

@@ -149,7 +149,7 @@ Ask me which of this repository's community health files to remove, and wait for
 
 **Find a prompt.** Each runs as it is, except those marked ✏️, which ask for your details.
 
-- **Tools:** [Add A Tool To The Image](#add-a-tool-to-the-image) ✏️, [Remove A Tool From The Image](#remove-a-tool-from-the-image) ✏️, [Move A Tool To A New Version](#move-a-tool-to-a-new-version) ✏️, [Check The Image Against The Standards' Pins](#check-the-image-against-the-standards-pins)
+- **Tools:** [Add A Tool To The Image](#add-a-tool-to-the-image) ✏️, [Remove A Tool From The Image](#remove-a-tool-from-the-image) ✏️, [Move A Tool To A New Version](#move-a-tool-to-a-new-version) ✏️, [Find Checks That Bring Their Own Tools](#find-checks-that-bring-their-own-tools)
 - **Using it:** [Find Why A Check Differs In The Image](#find-why-a-check-differs-in-the-image) ✏️, [Check A Published Image Holds What It Promises](#check-a-published-image-holds-what-it-promises) ✏️, [Plan Moving A Repository Onto The Image](#plan-moving-a-repository-onto-the-image) ✏️
 
 ---
@@ -158,11 +158,11 @@ Ask me which of this repository's community health files to remove, and wait for
 
 ### Add A Tool To The Image
 
-**Use when** tannergolden/standards starts running a check whose tool the image does not hold yet. **Fill in** `{{TOOL}}`, the tool, and the check in the standards that runs it.
+**Use when** a check, in the standards or here, needs a tool the image does not hold yet. **Fill in** `{{TOOL}}`, the tool, and the check that runs it.
 
 ```text
 <context>
-The image holds exactly the tools the standards' checks run, each at the version the standards pin, for linux/amd64 and linux/arm64. Every pin is in toolchain/: a release archive in versions, with a SHA-256 for each architecture, which install.sh downloads; a Python package in requirements.in; or an npm package in package.json. The README's What It Holds and toolchain/README.md list what the image holds. The tool: {{TOOL}}.
+The image holds exactly the tools the standards' checks run, for linux/amd64 and linux/arm64, and this repository owns their versions: the standards install them through .github/actions/toolchain. Every pin is in toolchain/: a release archive in versions, with a SHA-256 for each architecture, which install.sh downloads; a Python package in requirements.in; or an npm package in package.json. The README's What It Holds and toolchain/README.md list what the image holds. The tool: {{TOOL}}.
 </context>
 
 <task>
@@ -170,7 +170,7 @@ Pin the tool in toolchain/ at the version the standards pin, install it with the
 </task>
 
 <constraints>
-- Take the version from the standards' files, and name the file; if they pin none, ask me.
+- Pin the tool's newest release unless I name a version, and read its release notes for anything that changes what the check reports.
 - Pin it the way the others are pinned. An archive takes a SHA-256 for each architecture, from the project's own published checksums where it publishes them, and its download goes in the first half of install.sh, where everything is checked before anything is installed. A Python or npm package takes a line in requirements.in or package.json, then make lock. Never pipe a download into a shell. If it cannot be had that way for both architectures, stop and tell me.
 - An archive also goes in the TOOLS lists in tests/test_toolchain.py and tests/test_install.py, and every tool gets its version command in tests/image/test_image.py.
 - If any detail above is still a placeholder in double braces, ask me for it before you start.
@@ -210,15 +210,15 @@ Find everything that still uses the tool. If nothing does, take its pin out of t
 
 ### Move A Tool To A New Version
 
-**Use when** a tool the image holds has a release you want, or the standards have moved its pin. **Fill in** `{{TOOL}}`, the tool; and `{{VERSION}}`, the version to move to, or `the standards' pin`.
+**Use when** a tool the image holds has a release you want. **Fill in** `{{TOOL}}`, the tool; and `{{VERSION}}`, the version to move to, or `the standards' pin`.
 
 ```text
 <context>
-A version lives in more than one place: here, its pin in toolchain/, either a version with both of its SHA-256 sums in versions or a line in requirements.in or package.json with its lock; and in tannergolden/standards its workflows, its Makefile and its dev container, where its AGENTS.md names the copies of ruff and pytest. The image and the standards drifting apart is what this repository exists to prevent. The tool: {{TOOL}}. The version: {{VERSION}}.
+A version lives here, in toolchain/: either a version with both of its SHA-256 sums in versions, or a line in requirements.in or package.json with its lock. The standards' checks install it from here through .github/actions/toolchain, so once it is released it is what every repository's checks run. The tool: {{TOOL}}. The version: {{VERSION}}.
 </context>
 
 <task>
-Move the tool to that version here, following Moving A Version in toolchain/README.md, and list every other place its old version is pinned, in the standards and in any other repository you can read, for me to move there.
+Move the tool to that version here, following Moving A Version in toolchain/README.md, and list any place in another repository you can read that still installs its own copy of the tool, for me to point at the action.
 </task>
 
 <constraints>
@@ -229,30 +229,30 @@ Move the tool to that version here, following Moving A Version in toolchain/READ
 
 <done_when>
 - make lint and make test pass at the new version, the image tests included.
-- You report each command with the last line of its output, each checksum's source, and every other pin to move, with its file and line.
+- You report each command with the last line of its output, each checksum's source, and every other copy you found, with its file and line.
 </done_when>
 ```
 
-### Check The Image Against The Standards' Pins
+### Find Checks That Bring Their Own Tools
 
-**Use when** you want to know whether the image and the standards still agree on every tool and every version, such as before a release or after the standards change.
+**Use when** you want to know whether every check runs the image's tools, such as before a release or after the standards change.
 
 ```text
 <context>
-The image is worth pulling only while it holds exactly what the standards' checks run. tannergolden/standards pins its tools in its workflows, its composite actions, its Makefile, its dev container and its configuration files, some in more than one place. This repository pins every tool the image holds in toolchain/: versions, requirements.in and package.json.
+The standards' checks get their tools from this repository through .github/actions/toolchain, at the versions pinned in toolchain/: versions, requirements.in and package.json. A check that installs its own copy instead, in a workflow, a composite action, a Makefile, a dev container or a configuration file, can drift from the image without anything failing.
 </context>
 
 <task>
-List every tool and version the standards pin, with each place it is pinned, and compare them with the pins in toolchain/.
+List every tool the standards' checks run, with where each comes from: the toolchain action, or an install of its own. Compare each one of its own with the pins in toolchain/.
 </task>
 
 <constraints>
 - Change nothing in either repository. Read the standards at v1, the tag every repository calls them at, from a checkout or from GitHub, and say which.
-- Count as a finding a tool the standards run without pinning it, and one the image holds that no check runs.
+- Count as a finding a tool a check runs without pinning it, and one the image holds that no check runs.
 </constraints>
 
 <output>
-A table: each tool, the standards' version and where it is pinned, the image's version, and whether they agree. Then each disagreement, those that change a check's result first, with the change it needs and on which side.
+A table: each tool, where the standards get it, its version there, the image's version, and whether they agree. Then each check that brings its own copy, those that change a check's result first, with the change it needs.
 </output>
 ```
 
@@ -315,7 +315,7 @@ A verdict first. Then each platform with its digest and every tool's version aga
 
 ```text
 <context>
-A repository points at the image by tag in its .devcontainer/devcontainer.json, as the README's How A Repository Uses It shows, and its CI can run its checks inside the image. tannergolden/path ships the dev container every generated repository keeps current, and the standards' Environment & Technologies document still says to pin runtimes with version managers. The repository: {{REPOSITORY}}.
+A repository points at the image by tag in its .devcontainer/devcontainer.json, as the README's How A Repository Uses It shows, and its CI can run its checks inside the image. tannergolden/path ships the dev container every generated repository keeps current, and the standards' Environment & Technologies document says which tools come from the image and which a repository keeps. The repository: {{REPOSITORY}}.
 </context>
 
 <task>
