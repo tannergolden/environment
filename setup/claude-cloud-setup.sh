@@ -20,7 +20,8 @@
 # every failure prints a notice and the script exits 0: the session starts
 # with the tools its own image has. The installer fetches and checks
 # everything before it installs anything, so a failed download changes
-# nothing, and it is stopped if it runs past 15 minutes.
+# nothing, and after 15 minutes it is told to stop, which it does at the end
+# of the step it is on.
 #
 # It runs in a subshell and never exits the script it is pasted into, so it
 # can share the field with another setup script. Paste it above one that
@@ -72,8 +73,11 @@
         || { notice "toolchain/$file for $VERSION does not match its pin, so nothing was installed"; return 0; }
     done
     status=0
-    if command -v timeout >/dev/null 2>&1; then
-      timeout 900 sh "$dir/toolchain/install.sh" --user || status=$?
+    # --foreground keeps the installer in this script's process group, so
+    # whatever stops the setup stops the installer too. At 15 minutes the
+    # installer is told to stop, and does at the end of the step it is on.
+    if timeout --foreground 1 true >/dev/null 2>&1; then
+      timeout --foreground 900 sh "$dir/toolchain/install.sh" --user || status=$?
     else
       sh "$dir/toolchain/install.sh" --user || status=$?
     fi

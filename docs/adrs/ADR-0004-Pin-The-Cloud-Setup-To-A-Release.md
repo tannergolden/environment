@@ -78,7 +78,7 @@ The printer reads each file from the tag, not the working tree, and the copy in
 the repository keeps placeholders that match no file, so an unpinned copy
 installs nothing (Driver 2). It runs in a subshell, prints a notice for every
 failure and exits 0, the installer changes nothing when a download fails, and
-the installer is stopped after 15 minutes (Driver 3). The tools go into
+the installer is told to stop after 15 minutes (Driver 3). The tools go into
 `~/.local/bin`, ahead of the session's own, and the session keeps its own
 Python, and its own Node.js when that is 22 or newer.
 

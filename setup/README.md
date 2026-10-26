@@ -32,7 +32,8 @@ Python, and its own Node.js when that is 22 or newer.
 without, so every failure prints a notice instead, and the session starts with
 the tools its own image has. The installer fetches and checks everything
 before it installs anything, so a failed download leaves those tools as they
-were, and it is stopped if it runs past 15 minutes.
+were, and after 15 minutes it is told to stop, which it does at the end of
+the step it is on.
 
 ---
 
