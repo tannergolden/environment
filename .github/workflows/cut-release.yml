@@ -14,14 +14,20 @@
 # one place: it refuses a commit that is not on the default branch and a
 # version that does not move forward.
 #
-# DRY RUN FIRST. `dry-run` is on by default, and runs everything that proves
-# a release while publishing nothing: it tests the image here, then builds
-# both architectures natively on runners of their own, and pushes no tag and
-# no image. Untick it to release.
+# EACH ARCHITECTURE IS TESTED ON ITS OWN RUNNER BEFORE ANYTHING IS TAGGED.
+# The image is built and its tests run on an amd64 runner and on an arm64
+# one, and the version is tagged only when both pass. The publish job then
+# builds each architecture again, natively, from the same commit.
+#
+# DRY RUN FIRST. `dry-run` is on by default: it tests both architectures,
+# then builds both the way the release does, and pushes no tag and no image.
+# The release's own guards (the default branch, a version that moves
+# forward) run only in the real run, before anything is tagged.
 #
 # ⚠️ Moving `1` changes the image every repository's development container
-# names, on its next rebuild, without anyone on their side doing anything.
-# Treat a release as a production change to every repository at once.
+# will name, for each machine that pulls it next, without anyone on their
+# side doing anything. Treat a release as a production change to every
+# repository at once.
 #
 # WHY THE IMAGE IS PUBLISHED IN THIS RUN. The standards' release.yml creates
 # the release with the run's own token, and GitHub starts no workflow from
@@ -29,9 +35,13 @@
 # start. The image job runs here instead, after the tag, on the same commit.
 #
 # WHY THE TAGS ARE PLANNED HERE. The shared publisher tags an image with its
-# version and `latest`. The moving major that every devcontainer.json names
-# is this repository's own promise, so the plan step adds it, from the
+# version and `latest`. The moving major that devcontainer.json files will
+# name is this repository's own promise, so the plan step adds it, from the
 # version typed in.
+#
+# THE SBOMS ARE MADE BY JOBS THAT CAN ONLY READ. Each architecture's is made
+# on a runner of that architecture, so the generator catalogs that one, and
+# a last job, which runs nothing but `gh`, attaches both to the release.
 #
 # Every version stays: `keep-versions` turns off the prune the standards' Cut
 # Release runs for every other repository, because a pinned cloud setup
@@ -77,7 +87,7 @@ jobs:
         uses: tannergolden/standards/.github/actions/harden@v1
         with:
           egress-policy: audit
-          notice: '🧪 Verify: builds and tests the image on the commit about to be released.'
+          notice: '🧪 Verify: lints the commit about to be released, then builds and tests its image for linux/amd64.'
 
       - name: '📥 Checkout'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -91,8 +101,9 @@ jobs:
           MOVE_MAJOR: ${{ inputs.move-major }}
         run: |
           set -euo pipefail
-          if ! printf '%s' "$VERSION" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "::error title=Release::'$VERSION' is not a vX.Y.Z version."
+          # The whole input has to be the version, not just one of its lines.
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=Release::The version has to be vX.Y.Z, such as v1.0.0."
             exit 1
           fi
           version="${VERSION#v}"
@@ -110,9 +121,32 @@ jobs:
       - name: '🧪 Lint, Then Build And Test The Image'
         run: make lint test
 
+  verify-arm64:
+    name: '🧪 Verify The Release Candidate (linux/arm64)'
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    permissions:
+      contents: read # read the repository
+    steps:
+      - name: '🛡️ Harden Runner'
+        uses: tannergolden/standards/.github/actions/harden@v1
+        with:
+          egress-policy: audit
+          notice: '🧪 Verify: builds and tests the image for linux/arm64, on an arm64 runner.'
+
+      - name: '📥 Checkout'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Only the image tests: the lint and the unit tests are the same on
+      # every architecture, and the amd64 job runs them.
+      - name: '🧪 Build And Test The Image'
+        run: make test-image
+
   release:
     name: '🏷️ Publish Version & Move Major Tag'
-    needs: verify
+    needs: [verify, verify-arm64]
     if: ${{ !inputs.dry-run }}
     permissions:
       contents: write # create tags and publish the release
@@ -130,10 +164,10 @@ jobs:
 
   image:
     name: '🐳 Publish The Image'
-    needs: [verify, release]
+    needs: [verify, verify-arm64, release]
     # After the tag, or, in a dry run, which skips the tag, after the tests.
     # Never once the run is cancelled: stopping a release stops its image.
-    if: ${{ !cancelled() && needs.verify.result == 'success' && (needs.release.result == 'success' || (inputs.dry-run && needs.release.result == 'skipped')) }}
+    if: ${{ !cancelled() && needs.verify.result == 'success' && needs.verify-arm64.result == 'success' && (needs.release.result == 'success' || (inputs.dry-run && needs.release.result == 'skipped')) }}
     permissions:
       attestations: write # record the image's provenance attestation
       contents: read # read the repository
@@ -148,20 +182,27 @@ jobs:
       dry-run: ${{ inputs.dry-run }}
 
   sbom:
-    name: "🧾 Attach Each Architecture's SBOM"
+    name: '🧾 Make The SBOM (linux/${{ matrix.arch }})'
     needs: image
     if: ${{ !inputs.dry-run }}
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 15
     permissions:
-      contents: write # attach the SBOMs to the release
-      packages: read # read the images it catalogs, whatever their visibility
+      packages: read # read the image it catalogs, whatever its visibility
     steps:
       - name: '🛡️ Harden Runner'
         uses: tannergolden/standards/.github/actions/harden@v1
         with:
           egress-policy: audit
-          notice: '🧾 SBOM: catalogs each published architecture and attaches it to the release.'
+          notice: '🧾 SBOM: catalogs one published architecture, on a runner of that architecture.'
 
       - name: '🔑 Registry Login'
         env:
@@ -171,30 +212,54 @@ jobs:
 
       # A multi-architecture image is a list: each architecture is the image
       # tagged with its suffix, which is the thing an SBOM can describe.
-      - name: '🏷️ Name Each Architecture'
-        id: images
+      - name: '🏷️ Name The Architecture'
+        id: image
         env:
           VERSION: ${{ inputs.version }}
           REPO: ${{ github.repository }}
+          ARCH: ${{ matrix.arch }}
         run: |
           set -euo pipefail
           image="ghcr.io/$(printf '%s' "$REPO" | tr '[:upper:]' '[:lower:]')"
-          echo "amd64=registry:${image}:${VERSION#v}-amd64" >> "$GITHUB_OUTPUT"
-          echo "arm64=registry:${image}:${VERSION#v}-arm64" >> "$GITHUB_OUTPUT"
+          echo "source=registry:${image}:${VERSION#v}-${ARCH}" >> "$GITHUB_OUTPUT"
 
-      - name: '🧾 SBOM: linux/amd64'
+      - name: '🧾 Generate The SBOM'
         uses: tannergolden/standards/.github/actions/sbom@v1
         with:
-          source: ${{ steps.images.outputs.amd64 }}
-          output: 'release/sbom-linux-amd64.cdx.json'
+          source: ${{ steps.image.outputs.source }}
+          output: 'release/sbom-linux-${{ matrix.arch }}.cdx.json'
+          strict: 'true'
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: '🧾 SBOM: linux/arm64'
-        uses: tannergolden/standards/.github/actions/sbom@v1
+      - name: '📤 Keep It For The Attach Job'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          source: ${{ steps.images.outputs.arm64 }}
-          output: 'release/sbom-linux-arm64.cdx.json'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          name: sbom-linux-${{ matrix.arch }}
+          path: release/sbom-linux-${{ matrix.arch }}.cdx.json
+          if-no-files-found: error
+          retention-days: 1
+
+  attach:
+    name: '📎 Attach The SBOMs'
+    needs: sbom
+    if: ${{ !inputs.dry-run }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # attach the SBOMs to the release
+    steps:
+      - name: '🛡️ Harden Runner'
+        uses: tannergolden/standards/.github/actions/harden@v1
+        with:
+          egress-policy: audit
+          notice: "📎 Attach: adds each architecture's SBOM to the release."
+
+      - name: '📥 Fetch The SBOMs'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: sbom-linux-*
+          merge-multiple: true
+          path: release
 
       - name: '📎 Attach To The Release'
         env:
@@ -202,11 +267,9 @@ jobs:
           VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
-          shopt -s nullglob
-          files=(release/sbom-*.cdx.json)
-          if [ "${#files[@]}" -eq 0 ]; then
-            echo "::warning title=No SBOM::No SBOM was produced, so the release carries none. The image and its provenance attestation are published."
-            exit 0
-          fi
+          files=(release/sbom-linux-amd64.cdx.json release/sbom-linux-arm64.cdx.json)
+          for file in "${files[@]}"; do
+            [ -s "$file" ] || { echo "::error title=SBOM::$file was not made, so no SBOM was attached."; exit 1; }
+          done
           gh release upload "$VERSION" "${files[@]}" --repo "$GITHUB_REPOSITORY" --clobber
-          echo "Attached ${#files[@]} SBOM(s) to $VERSION."
+          echo "Attached the SBOM of each architecture to $VERSION."
