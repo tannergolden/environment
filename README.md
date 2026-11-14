@@ -18,79 +18,25 @@ _Defined once. Pulled everywhere._
 
 ---
 
-## 💡 What This Is
+## 💡 What It Is
 
-The repository that defines the account's development machine: Ubuntu
-24.04, git, Python 3.12, Node.js 22, and the tools the
-[standards](https://github.com/tannergolden/standards)' checks run, each at an
-exact version. It publishes them as one container image,
-`ghcr.io/tannergolden/environment`, which a repository names by tag instead
-of carrying a container of its own, the way it already calls
-`tannergolden/standards@v1` instead of copying workflows. The same installer
-puts the same tools in a Claude Code cloud session, and, through the
-standards' checks, in every repository's CI.
+The account's development machine: Ubuntu 24.04, git, Python 3.12, Node.js
+22, and the tools the [standards](https://github.com/tannergolden/standards)'
+checks run, each at an exact version. It publishes them as one container
+image, `ghcr.io/tannergolden/environment`, which a repository names by tag
+instead of carrying a container of its own. The same installer puts the same
+tools in a Claude Code cloud session and, through the standards' checks, in
+every repository's CI.
 
-A development container on a Mac, a Codespace, a Claude Code cloud session
-and CI then run the same check tools at the same versions. A check that
-passes or fails does so because of the code, not because two machines had
-different tools.
+So a development container, a Codespace, a cloud session and CI run the same
+check tools at the same versions, and a check passes or fails because of the
+code, not because two machines had different tools.
 
-> [!IMPORTANT]
-> **Status: v1.** `v1.0.0` is the first release, cut by 🏷️ Cut Release: the
-> image, the cloud setup script and the toolchain action ship in it.
-> [After The First Release](#-after-the-first-release) lists what the release
-> cannot do on its own.
+- **Status**: Active, released on the `v1` line by 🏷️ Cut Release.
 
 ---
 
-## 🎯 What It Fixes
-
-- **The development container is copied, not called.** Each repository
-  generated from the templates carries the same `devcontainer.json`, on the
-  moving `mcr.microsoft.com/devcontainers/base:ubuntu` tag, which now follows
-  Ubuntu 26.04 while CI runs 24.04. Its features are resolved when it is
-  built, and its gitleaks is Ubuntu's 8.16.0, where CI scans with 8.24.3.
-  None of the other check tools is in it. The repositories other repositories
-  call name this image instead, and any other can, as
-  [How A Repository Uses It](#-how-a-repository-uses-it) shows.
-- **Versions were pinned by hand, in several places.** The standards kept ruff
-  and pytest in three files, and actionlint and zizmor in two workflows each,
-  and `.github` runs markdownlint-cli2 with no version at all. The standards'
-  checks now take every version from here.
-- **A cloud session brings its own.** A Claude Code cloud session on this
-  account carried ruff 0.16.9 in October 2026, where the standards' checks
-  ran 0.15.8, and none of actionlint, zizmor, shellcheck, gitleaks, typos or
-  lychee.
-- **A fix means editing every copy.** One change here reaches them all.
-
----
-
-## 🧱 What It Holds
-
-| Part                                                                | What it is                                                                                                                                                                                                                                                                                      |
-| :------------------------------------------------------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The image                                                           | Ubuntu 24.04 pinned by digest; git, curl, make and Python 3.12 with pip, from Ubuntu's archive; Node.js 22; and actionlint, gitleaks, lychee, shellcheck, typos, ruff, pytest, zizmor, PyYAML, Prettier and markdownlint-cli2, each at the version `toolchain/` pins. A `vscode` user with sudo |
-| [`Dockerfile`](Dockerfile)                                          | The image's definition, at the root, where the release's publish job looks for it                                                                                                                                                                                                               |
-| [`toolchain/`](toolchain/README.md)                                 | Every tool's pin, and the installer the image, a cloud session and the toolchain action run                                                                                                                                                                                                     |
-| [`.github/actions/toolchain/`](.github/actions/toolchain/README.md) | The action that runs that installer in a GitHub Actions job, which is how the standards' checks get their tools                                                                                                                                                                                 |
-| [`setup/`](setup/README.md)                                         | The Claude Code cloud setup script, printed pinned to a release                                                                                                                                                                                                                                 |
-| [`tests/`](tests/README.md)                                         | Checks that the pins agree, that the installer refuses what it should, and that a built image holds each tool at its pinned version                                                                                                                                                             |
-| Each release                                                        | The image for `linux/amd64`, for Codespaces and Actions, and `linux/arm64`, for Apple silicon, each tested and built on its own architecture, with a provenance attestation, and an SBOM of each architecture on the release                                                                    |
-
-Each release tags the image with its version, such as `1.0.0`, the moving
-major `1`, and `latest`. A repository that wants exactness pins the image's
-digest instead.
-
-**What is exact and what is not.** The base is pinned by digest, and every tool
-the checks run by version and checksum. The packages the Dockerfile adds from
-Ubuntu's archive are its current ones when the image is built, and the base's
-own packages move with its digest, which Dependabot proposes each month. A
-release's tags stay on what it published unless a failed release is re-run; a
-digest never moves.
-
----
-
-## 🔌 How A Repository Uses It
+## 🚀 Quick Start
 
 ```jsonc
 // .devcontainer/devcontainer.json
@@ -104,143 +50,62 @@ The image's own label makes a development container work as `vscode`, so that
 is the whole file. Add `features` or a `postCreateCommand` for what one project
 needs beyond it.
 
-- **The repositories other repositories call**: the standards and the
-  intelligence hub name the image in their own development containers. The
-  templates keep a container of their own, so a repository generated from them
-  names the image only when it chooses to, with this file, and switches off
-  the two `.devcontainer` lines in its `.github/template-sync`, so
-  🔄 Template Sync never merges the template's container back.
-- **A Codespace**: it starts from the same file. Your dotfiles' `install.sh`
-  runs in it with the `curl` and `python3` the image carries, and installs the
-  agent rules from the intelligence hub once the dotfiles pin a hub release.
-- **A Claude Code cloud session**: it starts from its own image, and takes the
-  [cloud setup script](setup/README.md) instead, which installs the same check
-  tools at the same versions for the session's user. The session keeps its own
-  Python, and its own Node.js when that is 22 or newer.
+---
+
+## 📖 Using It
+
+### 🔌 How A Repository Uses It
+
+- **The repositories other repositories call**, the standards and the
+  intelligence hub, name the image in their own development containers. A
+  repository generated from the templates names it only when it chooses to,
+  and then switches off the two `.devcontainer` lines in its
+  `.github/template-sync`, so 🔄 Template Sync never merges the template's
+  container back.
+- **A Claude Code cloud session** takes the [cloud setup script](setup/README.md)
+  instead, which installs the same check tools at the same versions.
 - **CI**: the standards' checks install their tools with this repository's
-  [toolchain action](.github/actions/toolchain/README.md), at `@v1`, each job
-  only the ones it runs, so every repository that calls them runs the image's
-  tools with nothing of its own to change. That reaches a repository with the
-  first standards release that carries it. A repository's own lint and test
-  commands keep the runner's tools.
+  [toolchain action](.github/actions/toolchain/README.md), at `@v1`, so every
+  repository that calls them runs the image's tools with nothing to change.
 
-A machine pulls `:1` the first time it needs it and keeps that image through
-rebuilds until it pulls again: a new release reaches it after
-`docker pull ghcr.io/tannergolden/environment:1`, or a rebuild without cache. A
-new Codespace pulls it fresh.
+A machine keeps the `:1` it pulled through rebuilds: a new release reaches it
+after `docker pull ghcr.io/tannergolden/environment:1`. Each release tags the
+image with its version, the moving major `1` and `latest`; a repository that
+wants exactness pins the image's digest instead.
 
----
+### 🧱 What It Holds
 
-## 🗺️ Where It Sits
+| Part                                                                | What it is                                                                                  |
+| :------------------------------------------------------------------ | :------------------------------------------------------------------------------------------ |
+| [`Dockerfile`](Dockerfile)                                          | The image's definition, at the root, where the release's publish job looks for it           |
+| [`toolchain/`](toolchain/README.md)                                 | Every tool's pin, and the installer the image, a cloud session and the toolchain action run |
+| [`.github/actions/toolchain/`](.github/actions/toolchain/README.md) | The action that runs that installer in a GitHub Actions job                                 |
+| [`setup/`](setup/README.md)                                         | The Claude Code cloud setup script, printed pinned to a release                             |
+| [`tests/`](tests/README.md)                                         | Checks that the pins agree, and that a built image holds each tool at its pinned version    |
 
-| Repository     | Decides                                                              |
-| :------------- | :------------------------------------------------------------------- |
-| `standards`    | Which checks run, and how                                            |
-| `environment`  | Which tools, at which versions, those checks run with                |
-| `path`         | A new repository's folders, workflow stubs and development container |
-| `intelligence` | How AI agents behave, not what their machine has installed           |
-| `dotfiles`     | Your Mac's own shell and apps, and the agent rules on it             |
+### 🔖 Releasing
 
----
-
-## 🚀 Releasing
-
-1. **Dry run.** Dispatch 🏷️ Cut Release from the Actions tab with the version,
-   such as `v1.0.0`, and `dry-run` left on. It lints the commit, builds and
-   tests the image on an amd64 runner and an arm64 one, then builds both the
-   way the release does, and publishes nothing.
-2. **Release.** Once the dry run has finished, dispatch it again from
-   `Development` with `dry-run` off. It tags `v1.0.0` and moves `v1`, pushes
-   the image as `1.0.0`, `1` and `latest` with its provenance attestation, and
-   attaches an SBOM of each architecture to the release.
-3. **Check the package is public**, on its page under this repository's
-   Packages. A development container elsewhere pulls it without signing in
-   only if it is; if it is not, change its visibility in the package's
-   settings.
-4. **Pin the cloud sessions.** `make cloud-setup VERSION=v1.0.0` prints the
-   setup script for that release; [`setup/`](setup/README.md) says where it
+1. **Dry run.** Dispatch 🏷️ Cut Release from the Actions tab with the next
+   `vX.Y.Z` and `dry-run` left on. It lints, then builds and tests the image on
+   an amd64 runner and an arm64 one, and publishes nothing.
+2. **Release.** Dispatch it again with `dry-run` off. It tags the version and
+   moves `v1`, pushes the image with its provenance attestation, and attaches an
+   SBOM of each architecture to the release.
+3. **Check the package is public**, under this repository's Packages, so a
+   development container elsewhere can pull it without signing in.
+4. **Pin the cloud sessions**: `make cloud-setup VERSION=vX.Y.Z` prints the
+   setup script for that release, and [`setup/`](setup/README.md) says where it
    goes.
 
-If a job after the tag fails, re-run the failed jobs from the run's page: the
-tag and the release stay, and the image is built and pushed again. Do it
-within a week, while the SBOMs wait for the job that attaches them, and
-before dispatching Cut Release again: 🧹 Prune Run History keeps only the
-newest run of it. If the tagging job itself fails after pushing the tag, a
-re-run refuses the tag that now exists, so cut the next patch instead.
+If a job after the tag fails, re-run the failed jobs within a week; if the
+tagging job itself failed after pushing the tag, cut the next patch. A release
+changes the tools every repository's checks run, so treat it as a production
+change to all of them at once.
 
-A release changes what every repository naming `:1` gets the next time a
-machine pulls it, and moving `v1` changes the tools every repository's checks
-run through the toolchain action, the next time each runs. Treat one as a
-production change to all of them at once.
-
----
-
-## 🧭 After The First Release
-
-What this repository cannot do on its own:
-
-- [ ] Cut a standards release once its `Development` is green. Its checks then
-      take their tools from the toolchain action, and every repository's
-      checks with them. Until then they run the standards' own pins, which
-      match the first release's.
-- [ ] Paste the cloud setup script, printed by
-      `make cloud-setup VERSION=v1.0.0`, into the cloud environment's
-      settings, above the intelligence hub's.
-
-The templates keep a development container of their own on purpose: only the
-repositories other repositories call, the standards and the intelligence hub,
-name the image.
-[ADR-0005](docs/adrs/ADR-0005-Install-The-Toolchain-In-CI-Through-An-Action.md)
-records why CI installs the tools through the action instead of running inside
-the image.
-
----
-
-## 🌿 The Workflows
-
-Most workflows here hold only **triggers**: the logic lives in
-[`tannergolden/standards`](https://github.com/tannergolden/standards) and is
-pulled in by `uses:`, so a fix there reaches this repository without a commit
-here. 🔁 Intelligence Sync calls the intelligence hub's instead, and
-🏷️ Cut Release, 🛡️ OpenSSF Scorecard and 🔬 Verify Stub Ceilings run jobs of
-their own, as does the `toolchain` job in 🚦 Checks.
-
-| Workflow                   | Gives you                                                                                                                                              |
-| :------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `checks.yml`               | The gates: `make lint` and `make test`, which builds and tests the image, secret scan, CodeQL, workflow lint, and the toolchain action run on a runner |
-| `semantic-pr.yml`          | The `pr` check: PR title, branch name, commit messages, DCO sign-off                                                                                   |
-| `governance.yml`           | Onboarding, triage, stale sweep, slash commands                                                                                                        |
-| `cut-release.yml`          | The release: the tags, the image for both architectures, and their SBOMs                                                                               |
-| `maintenance.yml`          | Prunes stale deployments; deletes draft releases on request                                                                                            |
-| `prune-runs.yml`           | Prunes workflow run history, with its logs and artifacts                                                                                               |
-| `lifecycle.yml`            | Claimed this repository once; tells you when a new major exists                                                                                        |
-| `dependabot-automerge.yml` | Approves and queues Dependabot's patch and minor updates                                                                                               |
-| `ci-failure-alert.yml`     | Opens an issue when a watched workflow fails, closes it on green                                                                                       |
-| `apply-standards.yml`      | Dispatch-only. The label taxonomy, the settings and branch protection                                                                                  |
-| `auto-format.yml`          | Formats what a push touched, once a formatter is configured; none is here, so it runs none                                                             |
-| `preview-deploy.yml`       | Deploys pushes to a preview target, once one is configured                                                                                             |
-| `verify-stubs.yml`         | Proves every job's permission ceiling matches its called workflow                                                                                      |
-| `auto-index.yml`           | Redraws every folder log and index after a push, as a pull request                                                                                     |
-| `scorecard.yml`            | A weekly OpenSSF Scorecard score, filed under code scanning                                                                                            |
-| `template-sync.yml`        | Proposes the template's later fixes as one pull request, when run                                                                                      |
-| `intelligence-sync.yml`    | Proposes the shared agent rules as one pull request, every Monday                                                                                      |
-
-**Do not rename the job ids** `ci` and `secrets` (in `checks.yml`) or `pr` (in
-`semantic-pr.yml`). A called workflow reports its checks as
-`<job id> / <job name>`, so branch protection depends on them.
-
----
-
-## 🔑 Tokens
-
-- **🎯 Apply Standards** applies the label taxonomy with no token. Writing the
-  settings and the rulesets needs an `ADMIN_TOKEN` with **Administration: Read
-  and write** and nothing else:
-  [Creating the ADMIN_TOKEN](https://github.com/tannergolden/standards/blob/Development/docs/operations/Branch-Protection.md#-creating-the-admin_token).
-- **🔄 Template Sync** needs a `BOT_ACCESS_TOKEN` to update the files under
-  `.github/workflows/`, which GitHub's default token cannot write. Without it,
-  those files wait in an issue while everything else arrives.
-- **🏷️ Cut Release** needs none: GHCR takes the run's own token.
+[`.github/workflows/README.md`](.github/workflows/README.md) logs every
+workflow, and why CI installs the tools through the action rather than running
+inside the image is
+[ADR-0005](docs/adrs/ADR-0005-Install-The-Toolchain-In-CI-Through-An-Action.md).
 
 ---
 
@@ -309,25 +174,33 @@ tables after every push:
 
 ---
 
-## 📚 The Standards
+## 🤝 Getting Involved
 
-Everything about how to branch, review, release and secure a repository lives
-in the [Standards Index](https://github.com/tannergolden/standards/blob/Development/docs/README.md).
-This repository follows it **by link**.
+- **Questions**: [`SUPPORT.md`](/.github/SUPPORT.md) says where to ask.
+- **A bug or an idea**: open an issue from one of the forms.
+- **A change**: [`CONTRIBUTING.md`](/.github/CONTRIBUTING.md) explains how,
+  every change follows the
+  [standards](https://github.com/tannergolden/standards/blob/Development/docs/README.md)
+  by link, and every contribution follows the
+  [code of conduct](/.github/CODE_OF_CONDUCT.md).
+- **Who decides**: [`GOVERNANCE.md`](/.github/GOVERNANCE.md) names the
+  maintainers.
 
 ---
 
-## 🔒 Licence
+## 🛡️ Security
 
-This repository's own files are MIT. See [`LICENSE`](LICENSE).
+Report a vulnerability privately, never in an issue:
+[`SECURITY.md`](/.github/SECURITY.md) says how, and how fast a fix follows.
 
-The image redistributes software under each one's own licence, not this one:
-shellcheck and git are GPL, for instance, and most of the rest are permissive.
-Inside the image, each pinned tool's licence is in
-`/opt/environment/licenses/<tool>/`, Node.js's in `/usr/local/LICENSE`, each
-Python package's in its `.dist-info` folder, each npm package's in its folder
-under `/opt/environment/npm/node_modules/`, and Ubuntu's packages' in
-`/usr/share/doc/<package>/copyright`.
+---
+
+## ⚖️ Licence
+
+This repository's own files are released under the terms in [LICENSE](/LICENSE).
+The image redistributes software under each one's own licence: inside it, each
+pinned tool's licence is in `/opt/environment/licenses/<tool>/`, and Ubuntu's
+packages' in `/usr/share/doc/<package>/copyright`.
 
 ---
 
